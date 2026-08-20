@@ -1,0 +1,61 @@
+{
+  "version": "1.0",
+  "description": "Internal microinteraction pattern index",
+  "patterns": [
+    {
+      "id": "MI-TRIGGER-001",
+      "name": "explicit trigger with immediate acknowledgment",
+      "family": "trigger",
+      "tags": ["trigger", "acknowledgment", "button", "form"],
+      "path": "resources/patterns/MI-TRIGGER-001.md"
+    },
+    {
+      "id": "MI-FEEDBACK-002",
+      "name": "progressive feedback for async actions",
+      "family": "feedback",
+      "tags": ["feedback", "loading", "success", "error", "async"],
+      "path": "resources/patterns/MI-FEEDBACK-002.md"
+    },
+    {
+      "id": "MI-VALIDATION-003",
+      "name": "inline validation with corrective guidance",
+      "family": "validation",
+      "tags": ["validation", "forms", "error", "inline"],
+      "path": "resources/patterns/MI-VALIDATION-003.md"
+    },
+    {
+      "id": "MI-RECOVERY-004",
+      "name": "bounded retry with explicit fallback",
+      "family": "recovery",
+      "tags": ["recovery", "retry", "error", "fallback"],
+      "path": "resources/patterns/MI-RECOVERY-004.md"
+    },
+    {
+      "id": "MI-DESTRUCTIVE-005",
+      "name": "two-step confirmation with safe off-ramp",
+      "family": "destructive",
+      "tags": ["destructive", "confirmation", "undo", "risk"],
+      "path": "resources/patterns/MI-DESTRUCTIVE-005.md"
+    }
+  ],
+  "playbooks": [
+    {
+      "id": "PB-ASYNC-SAVE",
+      "name": "async save feedback",
+      "tags": ["save", "loading", "retry"],
+      "path": "resources/playbooks/async-save.md"
+    },
+    {
+      "id": "PB-DESTRUCTIVE-ACTION",
+      "name": "destructive action safety",
+      "tags": ["delete", "revoke", "confirmation", "undo"],
+      "path": "resources/playbooks/destructive-action.md"
+    },
+    {
+      "id": "PB-INLINE-VALIDATION",
+      "name": "inline validation",
+      "tags": ["form", "validation", "error", "focus"],
+      "path": "resources/playbooks/inline-validation.md"
+    }
+  ]
+}

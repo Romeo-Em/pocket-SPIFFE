@@ -1,0 +1,126 @@
+/* ============================================================
+   Design Tokens - Grayscale Wireframe System
+   White background, system fonts, no color.
+   ============================================================ */
+
+@layer base, utilities;
+
+@layer base {
+  :root {
+    /* -- Surfaces -- */
+    --z-bg:             #ffffff;
+    --z-bg-hover:       #e8e8e8;
+    --z-layer-01:       #f4f4f4;
+    --z-layer-02:       #e0e0e0;
+    --z-surface:        #f4f4f4;
+    --z-overlay:        rgba(0, 0, 0, 0.3);
+
+    /* -- Borders -- */
+    --z-border-subtle:  #c6c6c6;
+    --z-border-strong:  #8d8d8d;
+
+    /* -- Text -- */
+    --z-text-primary:   #161616;
+    --z-text-secondary: #525252;
+    --z-text-helper:    #6f6f6f;
+    --z-text-placeholder: #8d8d8d;
+
+    /* -- Interactive (blue for focus/links only) -- */
+    --z-focus:          #0f62fe;
+    --z-interactive:    #0f62fe;
+
+    /* -- Status (functional differentiation) -- */
+    --z-success:        #198038;
+    --z-error:          #da1e28;
+    --z-warning:        #f1c21b;
+    --z-info:           #0043ce;
+
+    /* -- Typography -- */
+    --z-font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --z-font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+    --z-text-2xs:  0.625rem;
+    --z-text-xs:   0.6875rem;
+    --z-text-sm:   0.75rem;
+    --z-text-base: 0.875rem;
+    --z-text-lg:   1rem;
+    --z-text-xl:   1.25rem;
+    --z-text-2xl:  1.5rem;
+
+    --z-weight-normal:   400;
+    --z-weight-medium:   500;
+    --z-weight-semibold: 600;
+    --z-weight-bold:     700;
+
+    --z-leading-tight:   1.125;
+    --z-leading-normal:  1.375;
+    --z-leading-relaxed: 1.5;
+
+    --z-tracking-tight:  0;
+    --z-tracking-normal: 0.16px;
+    --z-tracking-wide:   0.32px;
+
+    /* -- Spacing (2px grid) -- */
+    --z-space-01: 0.125rem;
+    --z-space-02: 0.25rem;
+    --z-space-03: 0.5rem;
+    --z-space-04: 0.75rem;
+    --z-space-05: 1rem;
+    --z-space-06: 1.5rem;
+    --z-space-07: 2rem;
+    --z-space-08: 2.5rem;
+    --z-space-09: 3rem;
+    --z-space-10: 4rem;
+
+    /* -- Border Radius -- */
+    --z-radius-none: 0;
+    --z-radius-sm:   2px;
+    --z-radius-md:   4px;
+    --z-radius-lg:   8px;
+    --z-radius-xl:   12px;
+    --z-radius-full: 50%;
+
+    /* -- Shadows -- */
+    --z-shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.05);
+    --z-shadow-md:   0 2px 8px rgba(0, 0, 0, 0.08);
+    --z-shadow-lg:   0 4px 16px rgba(0, 0, 0, 0.12);
+
+    /* -- Transitions -- */
+    --z-transition-fast: 0.15s ease;
+    --z-transition-base: 0.2s ease-out;
+    --z-transition-slow: 0.3s ease;
+
+    /* -- Z-Index -- */
+    --z-index-sticky:   100;
+    --z-index-tooltip:  200;
+    --z-index-modal:    1000;
+  }
+
+  body {
+    font-family: var(--z-font-sans);
+    font-size: var(--z-text-base);
+    line-height: var(--z-leading-relaxed);
+    letter-spacing: var(--z-tracking-normal);
+    background: var(--z-bg);
+    color: var(--z-text-primary);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  code, pre, .font-mono {
+    font-family: var(--z-font-mono);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--z-bg); }
+  ::-webkit-scrollbar-thumb { background: var(--z-border-subtle); border-radius: 0; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--z-border-strong); }
+
+  /* Focus ring */
+  *:focus-visible {
+    outline: 2px solid var(--z-focus);
+    outline-offset: 2px;
+  }
+}
