@@ -73,6 +73,9 @@ import {
   ComplianceReportExported,
 } from '@z/wireframes/sec/04-compliance-report';
 
+/* ── Prototype ───────────────────────────────────────────────── */
+import { PEPrototype } from '@z/wireframes/pe-spiffe-prototype.stories';
+
 /* ─── Preamble: PRD journey section ────────────────────────────
    Covers:
    - The Job (JTBD narrative)
@@ -1612,8 +1615,34 @@ export const config: ShowcaseConfig = {
     { id: 'requirements-intro', label: 'PRD Requirements' },
     { id: 'user-journey',       label: 'User Journey' },
     { id: 'journey-handoff',    label: 'How it Connects' },
+    { id: 'pe-prototype',       label: 'PE Prototype' },
   ],
   sections: [
+    /* ── Prototype ─────────────────────────────────────────────── */
+    {
+      id: 'pe-prototype',
+      title: 'Platform Engineer — Clickable Prototype',
+      subtitle: 'Full happy path and error branches wired end-to-end. Click through the flow: enable engine, configure trust domain, create role, attach auth method, verify trust bundle.',
+      stageNumber: 'Interactive',
+      states: {
+        'Full flow': PEPrototype,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>Scene coverage</h3>
+          <ul>
+            <li><strong>Happy path</strong>: engine list → enable → configure → role → auth → bundle → done (7 screens)</li>
+            <li><strong>Error branches</strong>: path conflict, domain error, issuer missing, template error, TTL error, bundle unreachable, bundle empty</li>
+            <li><strong>Auto-advance</strong>: saving and checking states progress automatically after ~1.3 s</li>
+          </ul>
+        </div>
+        <div class="ann-block">
+          <h3>Navigation</h3>
+          <p>Breadcrumb links and the VAULT logo navigate back. The scene hint (bottom-right, monospace) shows the current scene name for orientation during reviews.</p>
+        </div>
+      `,
+    },
+
     /* ── Platform Engineer ─────────────────────────────────────── */
     {
       id: 'pe-engine-list',
