@@ -1,5 +1,78 @@
 import type { ShowcaseConfig } from '../../src/types';
 
+/* ── UC1: Agentic Identity wireframes ────────────────────────── */
+import {
+  AgentAttestationAttesting,
+  AgentAttestationNodeIdentityIssued,
+  AgentAttestationFailed,
+} from '@z/wireframes/uc1/01-agent-attestation';
+import {
+  JwtSvidIssued,
+  JwtSvidExpired,
+} from '@z/wireframes/uc1/02-svid-issuance';
+import {
+  TokenExchangeRequest,
+  TokenExchangeOAuthJwtMinted,
+  TokenExchangeDenied,
+} from '@z/wireframes/uc1/03-token-exchange';
+import {
+  VaultResourceRequestPending,
+  VaultResourceSecretDelivered,
+  VaultResourcePolicyDenied,
+} from '@z/wireframes/uc1/04-vault-resource-request';
+import {
+  AgentRegistryActive,
+  AgentRegistrySuspended,
+} from '@z/wireframes/uc1/05-agent-registry';
+
+/* ── UC2: Infra Attestation wireframes ───────────────────────── */
+import {
+  EkRegistryEmpty,
+  EkRegistered,
+  EkConflict,
+} from '@z/wireframes/uc2/01-ek-enrollment';
+import {
+  TpmAttestationInProgress,
+  TpmAttestationComplete,
+  TpmAttestationFailed,
+} from '@z/wireframes/uc2/02-tpm-attestation';
+import {
+  X509SvidIssued,
+  X509SvidDetails,
+} from '@z/wireframes/uc2/03-x509-svid-issued';
+import {
+  MtlsHandshake,
+  MtlsVerified,
+  MtlsFailed,
+} from '@z/wireframes/uc2/04-mtls-service-mesh';
+import {
+  VaultSpiffeAuthRequest,
+  VaultSpiffeAuthGranted,
+  VaultSpiffeDynamicCredential,
+} from '@z/wireframes/uc2/05-vault-spiffe-auth';
+
+/* ── UC3: Kubernetes Workloads wireframes ────────────────────── */
+import {
+  K8sAuthTokenPresented,
+  K8sAuthBound,
+  K8sAuthUnboundSA,
+} from '@z/wireframes/uc3/01-k8s-auth';
+import {
+  SvidMountEmpty,
+  SvidWritten,
+  SvidPermissionDenied,
+} from '@z/wireframes/uc3/02-svid-to-filesystem';
+import {
+  IstioMtlsMeshPeers,
+  IstioMtlsAllVerified,
+  IstioMtlsTrustMismatch,
+} from '@z/wireframes/uc3/03-istio-mtls';
+import {
+  TrustBundleLive,
+  TrustBundleFederationPartner,
+  TrustBundleStale,
+} from '@z/wireframes/uc3/04-trust-bundle-distribution';
+
 /* ── Platform Engineer wireframes ────────────────────────────── */
 import {
   SecretsEngineListDefault,
@@ -1101,7 +1174,798 @@ const preamble = /* html */ `
   }
 </style>
 
-<!-- =========== USER JOURNEY =========== -->
+<script>
+  function switchUc1Step(id) {
+    document.querySelectorAll('#uc1-steps-tabs .persona-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#uc1-step-attest, #uc1-step-svid, #uc1-step-exchange, #uc1-step-resource, #uc1-step-registry').forEach(p => p.classList.remove('active'));
+    var tabs = document.querySelectorAll('#uc1-steps-tabs .persona-tab');
+    var ids = ['uc1-step-attest','uc1-step-svid','uc1-step-exchange','uc1-step-resource','uc1-step-registry'];
+    var idx = ids.indexOf(id);
+    if (idx >= 0) tabs[idx].classList.add('active');
+    var el = document.getElementById(id);
+    if (el) el.classList.add('active');
+  }
+  function switchUc2Step(id) {
+    document.querySelectorAll('#uc2-steps-tabs .persona-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#uc2-step-ek, #uc2-step-tpm, #uc2-step-svid, #uc2-step-mtls, #uc2-step-auth').forEach(p => p.classList.remove('active'));
+    var tabs = document.querySelectorAll('#uc2-steps-tabs .persona-tab');
+    var ids = ['uc2-step-ek','uc2-step-tpm','uc2-step-svid','uc2-step-mtls','uc2-step-auth'];
+    var idx = ids.indexOf(id);
+    if (idx >= 0) tabs[idx].classList.add('active');
+    var el = document.getElementById(id);
+    if (el) el.classList.add('active');
+  }
+  function switchUc3Step(id) {
+    document.querySelectorAll('#uc3-steps-tabs .persona-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#uc3-step-k8s, #uc3-step-fs, #uc3-step-istio, #uc3-step-bundle').forEach(p => p.classList.remove('active'));
+    var tabs = document.querySelectorAll('#uc3-steps-tabs .persona-tab');
+    var ids = ['uc3-step-k8s','uc3-step-fs','uc3-step-istio','uc3-step-bundle'];
+    var idx = ids.indexOf(id);
+    if (idx >= 0) tabs[idx].classList.add('active');
+    var el = document.getElementById(id);
+    if (el) el.classList.add('active');
+  }
+</script>
+
+<!-- =========== USE CASE JOURNEYS =========== -->
+
+<!-- UC1 -->
+<div class="journey-section fade-target" id="uc1-agentic-identity">
+  <div class="journey-section-header">
+    <div class="journey-section-label">Use Case 1</div>
+    <div class="journey-section-intro">
+      <p>Agentic Identity — JWT-SVID to OAuth JWT to Vault resource server.</p>
+      <p>A software agent running on cloud infrastructure must prove its identity without a pre-placed secret.
+         Node attestation via cloud metadata produces a JWT-SVID. That SVID is exchanged at an Authorization
+         Server for an OAuth JWT scoped to the agent's policy. The agent presents the OAuth JWT to the Vault
+         resource server and receives only the secrets its policy permits. No Vault token bootstrap required.</p>
+    </div>
+  </div>
+</div>
+
+<div class="persona-tabs" id="uc1-steps-tabs">
+  <div class="persona-tab active" onclick="switchUc1Step('uc1-step-attest')">1. Attestation</div>
+  <div class="persona-tab" onclick="switchUc1Step('uc1-step-svid')">2. SVID Issuance</div>
+  <div class="persona-tab" onclick="switchUc1Step('uc1-step-exchange')">3. Token Exchange</div>
+  <div class="persona-tab" onclick="switchUc1Step('uc1-step-resource')">4. Resource Request</div>
+  <div class="persona-tab" onclick="switchUc1Step('uc1-step-registry')">5. Agent Registry</div>
+</div>
+
+<div class="persona-panel active fade-target" id="uc1-step-attest">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">Node Attestation</div>
+      <div class="ctx-sub">Agent presents cloud metadata. Vault validates identity claim against registered nodes.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Input</div>
+      <div class="ctx-value">Cloud instance metadata (GCP/AWS)</div>
+      <div class="ctx-sub">No pre-placed Vault token. No AppRole secret ID. Identity derived from infrastructure.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">Assigned SPIFFE ID — ready to mint JWT-SVID</div>
+      <div class="ctx-sub">Node record created in agent registry. Attestation logged with method and result.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Attesting</div>
+      <div class="journey-step-title">Vault validates the cloud metadata signature</div>
+      <div class="journey-step-body">
+        Agent sends instance identity document. Vault checks signature against the cloud provider's root of trust.
+        No credential is placed on the host before this call.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">GCP instance metadata</span>
+        <span class="step-tag">AWS EC2 identity doc</span>
+        <span class="step-tag">No pre-placed secret</span>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: NodeIdentityIssued</div>
+      <div class="journey-step-title">Attestation succeeds — SPIFFE ID assigned</div>
+      <div class="journey-step-body">
+        Node receives a SPIFFE ID bound to its instance path. JWT-SVID is ready. Next step: present to Authorization Server.
+        <code class="step-code">spiffe://corp.example/agent/gcp-instance-a3f7</code>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: AttestationFailed</div>
+      <div class="journey-step-title">Node not in registry — specific error returned</div>
+      <div class="journey-step-body">
+        If the node is not pre-registered, Vault returns the node ID and reason. Error is actionable — not a generic 403.
+        The resolution command is surfaced inline.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">Error identifies missing registration</span>
+        <span class="step-tag">Resolution command shown</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="persona-panel fade-target" id="uc1-step-svid">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">JWT-SVID Issuance</div>
+      <div class="ctx-sub">Vault mints a short-lived JWT carrying the agent's SPIFFE ID as subject.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Input</div>
+      <div class="ctx-value">Attested SPIFFE ID + role config</div>
+      <div class="ctx-sub">TTL from role. Audience from role. No manual cert management.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">Signed JWT-SVID — portable to Authorization Server</div>
+      <div class="ctx-sub">Expiry set. Auto-renewal via Vault Agent. Agent never holds an expired credential.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: JwtSvidIssued</div>
+      <div class="journey-step-title">JWT-SVID minted and ready</div>
+      <div class="journey-step-body">
+        The SVID carries the SPIFFE ID as <code>sub</code> claim. Signed by Vault's JWKS key.
+        Verifiable offline against Vault's OIDC well-known endpoint.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">Short-lived — TTL from role</span>
+        <span class="step-tag">SPIFFE ID as sub claim</span>
+        <span class="step-tag">Vault JWKS signed</span>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: JwtSvidExpired</div>
+      <div class="journey-step-title">SVID expired — Vault Agent renews automatically</div>
+      <div class="journey-step-body">
+        If renewal fails (Vault connectivity lost), the expired state is surfaced with the last-known expiry time.
+        Agent retries on reconnect. The workload is blocked, not silently using a stale credential.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="persona-panel fade-target" id="uc1-step-exchange">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">Token Exchange</div>
+      <div class="ctx-sub">JWT-SVID exchanged at Authorization Server for a scoped OAuth JWT.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Input</div>
+      <div class="ctx-value">JWT-SVID (RFC 8693 token exchange)</div>
+      <div class="ctx-sub">Authorization Server validates SVID against Vault OIDC endpoint, checks policy, issues OAuth JWT.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">OAuth JWT scoped to agent's policy</div>
+      <div class="ctx-sub">Audience is the Vault resource server. Scope is limited to what the agent's SPIFFE ID permits.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: TokenExchangeRequest</div>
+      <div class="journey-step-title">Agent presents JWT-SVID to Authorization Server</div>
+      <div class="journey-step-body">
+        RFC 8693 token exchange in progress. Authorization Server validates SVID signature and checks
+        the agent's SPIFFE ID against registered agent policy.
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: OAuthJwtMinted</div>
+      <div class="journey-step-title">OAuth JWT issued — agent holds a scoped credential</div>
+      <div class="journey-step-body">
+        Token carries audience, scope, and expiry. Agent uses this JWT to authenticate to the Vault resource server.
+        The SVID is consumed — it is not forwarded. Only the OAuth JWT crosses service boundaries.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">Audience: Vault resource server</span>
+        <span class="step-tag">Scope from SPIFFE ID policy</span>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: TokenExchangeDenied</div>
+      <div class="journey-step-title">Exchange denied — SPIFFE ID not authorized</div>
+      <div class="journey-step-body">
+        If the agent's SPIFFE ID is not registered at the Authorization Server, exchange is denied with the
+        specific SPIFFE ID and reason. No fallback credential is issued.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="persona-panel fade-target" id="uc1-step-resource">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">Vault Resource Request</div>
+      <div class="ctx-sub">Agent presents OAuth JWT to Vault resource server and receives secrets within policy scope.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Input</div>
+      <div class="ctx-value">Scoped OAuth JWT</div>
+      <div class="ctx-sub">Vault validates JWT against its OIDC configuration, maps to entity, enforces policy.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">Secret delivered — or policy denial with reason</div>
+      <div class="ctx-sub">Audit log records entity, OAuth JWT subject, path requested, and outcome.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Pending</div>
+      <div class="journey-step-title">OAuth JWT being validated against resource server policy</div>
+      <div class="journey-step-body">Vault verifies audience, expiry, and maps the token subject to an entity alias. Policy evaluation in progress.</div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: SecretDelivered</div>
+      <div class="journey-step-title">Secret delivered — no Vault token, no static credential</div>
+      <div class="journey-step-body">
+        The agent receives the secret directly. The chain is: cloud metadata → SVID → OAuth JWT → secret.
+        No standing Vault token held by the agent process at any point.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">Tokenless Vault resource server</span>
+        <span class="step-tag">Secret scoped to JWT audience + policy</span>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: PolicyDenied</div>
+      <div class="journey-step-title">Policy denial — exact path and reason surfaced</div>
+      <div class="journey-step-body">
+        Vault returns the denied path and the policy rule that blocked it. Operator does not need to
+        reverse-engineer the policy from a generic 403.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="persona-panel fade-target" id="uc1-step-registry">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">Agent Registry</div>
+      <div class="ctx-sub">Platform view of registered agents — SPIFFE IDs, attestation methods, last-seen timestamps.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Job to be done</div>
+      <div class="ctx-value">Know which agents are active and which are no longer expected</div>
+      <div class="ctx-sub">Deregister agents that have been decommissioned. Flag agents that have not attested recently.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">Registry record per agent — or suspension action</div>
+      <div class="ctx-sub">Suspension revokes the SPIFFE ID. New attestation attempts from the node are denied.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Active</div>
+      <div class="journey-step-title">Registry shows active agents with last attestation time</div>
+      <div class="journey-step-body">
+        Each row: node ID, SPIFFE ID, attestation method, last seen, status. Platform engineer can identify
+        stale entries without checking individual audit logs.
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Suspended</div>
+      <div class="journey-step-title">Agent suspended — future attestation attempts denied</div>
+      <div class="journey-step-body">
+        Suspension is immediate. The SPIFFE ID is revoked in the registry. Any new attestation from that
+        node ID is rejected at the attestation step, before a SVID is issued.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">Immediate effect</span>
+        <span class="step-tag">Existing SVIDs expire at TTL</span>
+        <span class="step-tag">Audit log records suspension</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UC2 -->
+<div class="journey-section fade-target" id="uc2-infra-attestation" style="margin-top: 2rem;">
+  <div class="journey-section-header">
+    <div class="journey-section-label">Use Case 2</div>
+    <div class="journey-section-intro">
+      <p>Infrastructure-agnostic Attestation — TPM enrollment to X.509 SVID to Vault SPIFFE auth.</p>
+      <p>On-prem VMs without cloud metadata need hardware-rooted identity. An Endorsement Key (EK)
+         is enrolled in Vault before the host is provisioned. At runtime, Vault Agent presents a TPM 2.0
+         attestation quote. Vault verifies it against the registered EK, mints an X.509 SVID, and the
+         workload uses that SVID for mTLS and for authenticating back to Vault via the SPIFFE auth method.</p>
+    </div>
+  </div>
+</div>
+
+<div class="persona-tabs" id="uc2-steps-tabs">
+  <div class="persona-tab active" onclick="switchUc2Step('uc2-step-ek')">1. EK Enrollment</div>
+  <div class="persona-tab" onclick="switchUc2Step('uc2-step-tpm')">2. TPM Attestation</div>
+  <div class="persona-tab" onclick="switchUc2Step('uc2-step-svid')">3. X.509 SVID</div>
+  <div class="persona-tab" onclick="switchUc2Step('uc2-step-mtls')">4. mTLS</div>
+  <div class="persona-tab" onclick="switchUc2Step('uc2-step-auth')">5. SPIFFE Auth</div>
+</div>
+
+<div class="persona-panel active fade-target" id="uc2-step-ek">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">EK Enrollment</div>
+      <div class="ctx-sub">Platform engineer registers a host's TPM Endorsement Key before provisioning.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Input</div>
+      <div class="ctx-value">EK certificate from TPM manufacturer</div>
+      <div class="ctx-sub">Enrollment is out-of-band — happens before the host is deployed. Only registered EKs can attest.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">EK record in Vault registry</div>
+      <div class="ctx-sub">Host identity anchored to hardware. Any attestation from an unregistered EK is rejected.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Empty</div>
+      <div class="journey-step-title">No EKs registered — registry is empty</div>
+      <div class="journey-step-body">Before any on-prem host can attest, its EK must be enrolled. The empty state surfaces the enrollment command inline.</div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Registered</div>
+      <div class="journey-step-title">EK enrolled — host cleared for attestation</div>
+      <div class="journey-step-body">
+        Registry row shows: EK fingerprint, host label, enrollment date, attestation status.
+        The host can now attest on first boot.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">EK fingerprint</span>
+        <span class="step-tag">Enrollment timestamp</span>
+        <span class="step-tag">Status: cleared</span>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Conflict</div>
+      <div class="journey-step-title">EK already registered — duplicate rejected</div>
+      <div class="journey-step-body">
+        Attempting to register an EK that already exists returns the existing record with its original
+        enrollment date. Prevents silent overwrite of a host record.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="persona-panel fade-target" id="uc2-step-tpm">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">TPM Attestation</div>
+      <div class="ctx-sub">Vault Agent presents a TPM 2.0 quote. Vault verifies it against the enrolled EK.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Input</div>
+      <div class="ctx-value">TPM quote + AK certificate</div>
+      <div class="ctx-sub">Vault generates a nonce challenge, agent signs with TPM Attestation Key, Vault verifies the quote against the enrolled EK cert chain.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">Vault token + certificate bound to EK — or attestation failure</div>
+      <div class="ctx-sub">Token is scoped to cert auth policy. Certificate carries EK binding. X.509 SVID issued next.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: InProgress</div>
+      <div class="journey-step-title">Nonce challenge issued — waiting for TPM quote</div>
+      <div class="journey-step-body">Vault issued a nonce. Agent is computing the TPM quote. Challenge is time-bound — stale quotes are rejected.</div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Complete</div>
+      <div class="journey-step-title">TPM attestation verified — identity bound to hardware</div>
+      <div class="journey-step-body">
+        Vault verified the quote, matched the EK to the registry, issued a token and leaf cert.
+        The cert carries the host's SPIFFE ID. Next: mint X.509 SVID.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">TPM 2.0</span>
+        <span class="step-tag">EK-bound cert</span>
+        <span class="step-tag">Hardware-rooted identity</span>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Failed</div>
+      <div class="journey-step-title">Quote verification failed — specific reason returned</div>
+      <div class="journey-step-body">
+        Common causes: stale nonce, EK not enrolled, quote mismatch. Vault returns which check failed.
+        Platform engineer receives the specific EK fingerprint and mismatch type.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="persona-panel fade-target" id="uc2-step-svid">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">X.509 SVID Issued</div>
+      <div class="ctx-sub">Vault mints an X.509 SVID for the attested host. Certificate carries SPIFFE ID as URI SAN.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Input</div>
+      <div class="ctx-value">TPM-bound Vault token + SPIFFE role</div>
+      <div class="ctx-sub">Role defines the SPIFFE ID template, TTL, and key algorithm. Token proves the host was TPM-attested.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">X.509 SVID — cert + private key + CA chain</div>
+      <div class="ctx-sub">Short-lived. Auto-renewed by Vault Agent. URI SAN carries the SPIFFE ID. CA chain validates against the hosted trust bundle.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Issued</div>
+      <div class="journey-step-title">X.509 SVID minted — SPIFFE ID in URI SAN</div>
+      <div class="journey-step-body">
+        Certificate summary: subject, URI SAN (SPIFFE ID), issuer, key algorithm, expiry, and serial.
+        Private key written to agent's configured path. CA chain included for chain-of-trust verification.
+        <code class="step-code">Subject: CN=gcp-instance-a3f7
+URI SAN: spiffe://corp.example/on-prem/gcp-instance-a3f7
+Issuer:  CN=Vault SPIFFE CA, O=corp.example
+Key:     EC P-256
+Expiry:  +1h</code>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Details</div>
+      <div class="journey-step-title">Full certificate inspection view</div>
+      <div class="journey-step-body">
+        Extended view: key usage flags, cA=false confirmation, full issuer chain, trust bundle URL.
+        Security engineers use this view to confirm spec compliance without parsing PEM manually.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">cA=false on leaf cert</span>
+        <span class="step-tag">Key usage: digitalSignature + serverAuth + clientAuth</span>
+        <span class="step-tag">Exactly one URI SAN</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="persona-panel fade-target" id="uc2-step-mtls">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">mTLS Service Mesh</div>
+      <div class="ctx-sub">On-prem workload presents X.509 SVID in mTLS handshake. Peer validates against Vault trust bundle.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Input</div>
+      <div class="ctx-value">X.509 SVID (client certificate)</div>
+      <div class="ctx-sub">Peer fetches Vault trust bundle once, caches locally. Validation is offline — Vault not called at handshake time.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">Mutual TLS session established — or handshake rejected</div>
+      <div class="ctx-sub">Peer identity confirmed by SPIFFE ID in URI SAN. No shared secret. No runtime Vault call.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Handshake</div>
+      <div class="journey-step-title">mTLS handshake in progress</div>
+      <div class="journey-step-body">Both sides present X.509 SVIDs. Each validates the other's certificate against its locally cached trust bundle.</div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Verified</div>
+      <div class="journey-step-title">mTLS established — both SPIFFE IDs confirmed</div>
+      <div class="journey-step-body">
+        Connection summary: local SPIFFE ID, peer SPIFFE ID, cipher suite, trust bundle version used.
+        No static credential exchanged at any point.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">Envoy</span>
+        <span class="step-tag">Istio</span>
+        <span class="step-tag">gRPC mTLS</span>
+        <span class="step-tag">Offline validation</span>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Failed</div>
+      <div class="journey-step-title">Handshake rejected — trust bundle mismatch or expired SVID</div>
+      <div class="journey-step-body">
+        Failure reason is specific: expired cert, CA not in trust bundle, or SPIFFE ID format invalid.
+        Fails closed — no session established on any validation error.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="persona-panel fade-target" id="uc2-step-auth">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">Vault SPIFFE Auth</div>
+      <div class="ctx-sub">Workload presents X.509 SVID to Vault SPIFFE auth method on another cluster.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Input</div>
+      <div class="ctx-value">X.509 SVID (issued by this or a federated cluster)</div>
+      <div class="ctx-sub">Vault SPIFFE auth validates the SVID against the trust bundle, maps SPIFFE ID to entity alias, enforces policy.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">Vault token scoped to entity policy — or dynamic cloud credential</div>
+      <div class="ctx-sub">Identity portable: the SVID issued by one Vault is accepted as auth on another Vault.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Request</div>
+      <div class="journey-step-title">SVID presented to SPIFFE auth method</div>
+      <div class="journey-step-body">Vault validates SVID signature, checks SPIFFE ID against allowed patterns, maps to entity alias.</div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Granted</div>
+      <div class="journey-step-title">SPIFFE auth succeeded — Vault token issued</div>
+      <div class="journey-step-body">
+        Token is scoped to the entity's policy. The SPIFFE ID is the only credential presented.
+        No AppRole, no userpass, no static token bootstrap.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">Cross-cluster identity</span>
+        <span class="step-tag">SPIFFE ID → entity alias → policy</span>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: DynamicCredential</div>
+      <div class="journey-step-title">SVID exchanged for dynamic cloud credential</div>
+      <div class="journey-step-body">
+        Workload presents SVID, receives short-lived AWS/GCP/Azure credential from Vault's cloud secrets engine.
+        The SPIFFE ID is the only identity thread. No static cloud key on the host.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">AWS STS</span>
+        <span class="step-tag">GCP service account key</span>
+        <span class="step-tag">Azure managed identity token</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UC3 -->
+<div class="journey-section fade-target" id="uc3-kubernetes-workloads" style="margin-top: 2rem;">
+  <div class="journey-section-header">
+    <div class="journey-section-label">Use Case 3</div>
+    <div class="journey-section-intro">
+      <p>Kubernetes Workloads — K8s service account to X.509 SVID to Istio mTLS mesh.</p>
+      <p>Kubernetes workloads authenticate to Vault using their service account token. Vault Agent
+         writes the X.509 SVID to a filesystem path. The Istio sidecar reads the SVID and presents
+         it in every mTLS connection within the mesh. The trust bundle is distributed from Vault's
+         hosted endpoint — no separate Istio CA, no SPIRE server required.</p>
+    </div>
+  </div>
+</div>
+
+<div class="persona-tabs" id="uc3-steps-tabs">
+  <div class="persona-tab active" onclick="switchUc3Step('uc3-step-k8s')">1. K8s Auth</div>
+  <div class="persona-tab" onclick="switchUc3Step('uc3-step-fs')">2. SVID to Filesystem</div>
+  <div class="persona-tab" onclick="switchUc3Step('uc3-step-istio')">3. Istio mTLS</div>
+  <div class="persona-tab" onclick="switchUc3Step('uc3-step-bundle')">4. Trust Bundle</div>
+</div>
+
+<div class="persona-panel active fade-target" id="uc3-step-k8s">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">Kubernetes Auth</div>
+      <div class="ctx-sub">Pod presents its projected service account token. Vault validates against the cluster's OIDC endpoint.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Input</div>
+      <div class="ctx-value">K8s projected service account JWT</div>
+      <div class="ctx-sub">Token is audience-scoped to Vault. Vault validates signature and service account binding. No static secret on the pod.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">Vault token mapped to K8s service account entity</div>
+      <div class="ctx-sub">Entity alias carries namespace, service account name, and pod labels. SPIFFE ID template resolves from these.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: TokenPresented</div>
+      <div class="journey-step-title">Service account token validated against K8s OIDC</div>
+      <div class="journey-step-body">
+        Vault calls the K8s TokenReview API to validate the projected token. Binds to namespace and service account.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">Projected SA token</span>
+        <span class="step-tag">Audience: Vault</span>
+        <span class="step-tag">No static secret in pod spec</span>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Bound</div>
+      <div class="journey-step-title">Auth bound — entity alias created from service account metadata</div>
+      <div class="journey-step-body">
+        Entity alias carries: namespace, service account name. SPIFFE ID template resolves to
+        <code>spiffe://corp.example/k8s/payments/payments-processor</code>.
+        Ready to mint X.509 SVID.
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: UnboundSA</div>
+      <div class="journey-step-title">Service account not bound to a Vault role — specific error</div>
+      <div class="journey-step-body">
+        Vault returns the namespace and service account name that failed binding. Platform engineer sees exactly
+        which service account needs a role created or updated.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="persona-panel fade-target" id="uc3-step-fs">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">SVID to Filesystem</div>
+      <div class="ctx-sub">Vault Agent mounts X.509 SVID files into the pod at the configured path.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Input</div>
+      <div class="ctx-value">Vault Agent template config pointing to SPIFFE role</div>
+      <div class="ctx-sub">Agent handles auth, minting, renewal, and file write. Workload reads files — no Vault SDK in the application.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">tls.crt + tls.key at configured path</div>
+      <div class="ctx-sub">Istio sidecar reads from this path. File is replaced atomically on renewal. No restart required.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Empty</div>
+      <div class="journey-step-title">Mount path exists — no SVID files yet</div>
+      <div class="journey-step-body">
+        Vault Agent has not yet completed its first mint cycle. The path is present but empty.
+        Istio sidecar is waiting for files before accepting connections.
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Written</div>
+      <div class="journey-step-title">SVID files written — Istio sidecar picks up immediately</div>
+      <div class="journey-step-body">
+        <code>tls.crt</code> and <code>tls.key</code> present at the configured path.
+        File sizes and modification times confirm freshness. Auto-renewal is active — next renewal at TTL - 10%.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">Atomic file write</span>
+        <span class="step-tag">Auto-renewal active</span>
+        <span class="step-tag">No pod restart on renewal</span>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: PermissionDenied</div>
+      <div class="journey-step-title">Write failed — filesystem permission error</div>
+      <div class="journey-step-body">
+        Vault Agent received the SVID but could not write to the configured path.
+        Error surfaces the path, the UID/GID of the agent process, and the required permissions.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="persona-panel fade-target" id="uc3-step-istio">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">Istio mTLS</div>
+      <div class="ctx-sub">Istio sidecar uses Vault-issued X.509 SVIDs for all mesh traffic. No Istio CA required.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Input</div>
+      <div class="ctx-value">X.509 SVID at configured filesystem path</div>
+      <div class="ctx-sub">Istio reads cert and key files. Replaces its self-signed identity with the Vault-issued SVID. Validates peers against Vault trust bundle.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">All mesh connections mTLS with SPIFFE-certified identities</div>
+      <div class="ctx-sub">Peer SPIFFE IDs visible in Istio telemetry. Trust boundary is the Vault trust domain, not the Istio mesh boundary.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: MeshPeers</div>
+      <div class="journey-step-title">Mesh peers — SVID status per service</div>
+      <div class="journey-step-body">
+        Table shows each mesh peer with its SPIFFE ID, SVID expiry, and last handshake result.
+        Services without a SVID are flagged but not broken — they fall back to token auth.
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: AllVerified</div>
+      <div class="journey-step-title">All peers verified — mesh is fully SPIFFE-certified</div>
+      <div class="journey-step-body">
+        Every service in the mesh presents a valid Vault-issued SVID. All mTLS handshakes verified
+        against the same trust bundle. Banner confirms no static credential in any connection.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">Full mesh mTLS</span>
+        <span class="step-tag">Single trust domain</span>
+        <span class="step-tag">No Istio CA</span>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: TrustMismatch</div>
+      <div class="journey-step-title">Trust bundle mismatch — connection blocked</div>
+      <div class="journey-step-body">
+        One or more peers hold an SVID signed by a CA no longer in the trust bundle (post-rotation, stale).
+        Blocked connections are named specifically. Vault Agent auto-renews — resolution is waiting for renewal cycle.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="persona-panel fade-target" id="uc3-step-bundle">
+  <div class="persona-context">
+    <div class="persona-context-cell">
+      <div class="ctx-label">Step</div>
+      <div class="ctx-value">Trust Bundle Distribution</div>
+      <div class="ctx-sub">Vault hosts the trust bundle. All mesh participants fetch it once and cache locally.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Input</div>
+      <div class="ctx-value">Bundle endpoint URL (no Vault token required)</div>
+      <div class="ctx-sub">Tokenless fetch. Any SPIFFE-aware consumer can retrieve and cache the bundle without Vault credentials.</div>
+    </div>
+    <div class="persona-context-cell">
+      <div class="ctx-label">Output</div>
+      <div class="ctx-value">JSON bundle with X.509 CA public keys — or federation partner bundle</div>
+      <div class="ctx-sub">Single endpoint per mount. Federation partners fetch each other's bundles to enable cross-trust-domain mTLS.</div>
+    </div>
+  </div>
+  <div class="journey-steps">
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Live</div>
+      <div class="journey-step-title">Trust bundle live — CA keys served, tokenless</div>
+      <div class="journey-step-body">
+        Bundle endpoint returns JSON with X.509 CA public keys. Key count, last updated timestamp,
+        and cache-control header confirm freshness. Any SPIFFE-aware service fetches and caches.
+        <code class="step-code">curl https://vault.corp.example/v1/spiffe/bundle
+# Returns: { "keys": [...], "spiffe_refresh_hint": 3600 }</code>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: FederationPartner</div>
+      <div class="journey-step-title">Cross-trust-domain federation — two Vault clusters</div>
+      <div class="journey-step-body">
+        Platform engineer registers a federation partner by pointing to the partner Vault's bundle endpoint.
+        Vault fetches the partner's bundle, caches it, and adds it to its trust set.
+        SVIDs from the partner cluster are now valid in mTLS connections within this trust domain.
+      </div>
+      <div class="journey-step-meta">
+        <span class="step-tag">SPIFFE federation bundle endpoint spec</span>
+        <span class="step-tag">Cross-cluster mTLS</span>
+        <span class="step-tag">Bundle auto-refresh</span>
+      </div>
+    </div>
+    <div class="journey-step fade-target">
+      <div class="journey-step-num">State: Stale</div>
+      <div class="journey-step-title">Bundle stale — refresh hint exceeded</div>
+      <div class="journey-step-body">
+        Consumers that have not refreshed past the hint window are flagged. The bundle endpoint
+        is still live — the warning is surfaced in the UI for platform engineers monitoring bundle health.
+        Stale consumers will fail mTLS after CA rotation if they do not refresh.
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <div class="journey-section fade-target" id="user-journey">
   <div class="journey-section-header">
     <div class="journey-section-label">User Journey</div>
@@ -1604,20 +2468,320 @@ export const config: ShowcaseConfig = {
     pdr: 'VLT-515',
     date: 'July 2026',
   },
-  outputName: '001.SpiffeX509Minting-Draft01',
+  outputName: '002.SpiffeX509Minting-Draft02',
   theme: 'grayscale',
   preamble,
   preambleNav: [
-    { id: 'the-job',            label: 'The Job' },
-    { id: 'the-solution',       label: 'The Solution' },
-    { id: 'principles',         label: 'Design Principles' },
-    { id: 'milestone-arc',      label: 'Milestone Arc' },
-    { id: 'requirements-intro', label: 'PRD Requirements' },
-    { id: 'user-journey',       label: 'User Journey' },
-    { id: 'journey-handoff',    label: 'How it Connects' },
-    { id: 'pe-prototype',       label: 'PE Prototype' },
+    { id: 'the-job',                label: 'The Job' },
+    { id: 'the-solution',           label: 'The Solution' },
+    { id: 'principles',             label: 'Design Principles' },
+    { id: 'milestone-arc',          label: 'Milestone Arc' },
+    { id: 'requirements-intro',     label: 'PRD Requirements' },
+    { id: 'user-journey',           label: 'User Journey' },
+    { id: 'journey-handoff',        label: 'How it Connects' },
+    { id: 'uc1-agentic-identity',   label: 'UC1 — Agentic Identity' },
+    { id: 'uc2-infra-attestation',  label: 'UC2 — Infra Attestation' },
+    { id: 'uc3-kubernetes-workloads', label: 'UC3 — Kubernetes Workloads' },
+    { id: 'pe-prototype',           label: 'PE Prototype' },
   ],
   sections: [
+    /* ── UC1: Agentic Identity ─────────────────────────────────── */
+    {
+      id: 'uc1-attestation',
+      title: 'UC1 — Node Attestation',
+      subtitle: 'Agent presents cloud metadata. Vault validates identity claim against registered nodes.',
+      stageNumber: 'UC1 — Step 1',
+      states: {
+        'Attesting':           AgentAttestationAttesting,
+        'Node identity issued': AgentAttestationNodeIdentityIssued,
+        'Attestation failed':  AgentAttestationFailed,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>No pre-placed credential</h3>
+          <p>The agent presents cloud instance metadata — not a Vault token, not an AppRole secret. Identity is derived from the infrastructure the agent runs on.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Failed state</h3>
+          <p>If the node is not in the agent registry, the error names the node ID and the resolution command. Not a generic 403.</p>
+        </div>
+      `,
+    },
+    {
+      id: 'uc1-svid-issuance',
+      title: 'UC1 — JWT-SVID Issuance',
+      subtitle: 'Vault mints a short-lived JWT carrying the agent\'s SPIFFE ID.',
+      stageNumber: 'UC1 — Step 2',
+      states: {
+        'SVID issued':  JwtSvidIssued,
+        'SVID expired': JwtSvidExpired,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>Short-lived by design</h3>
+          <p>TTL is set at the role level. Vault Agent renews before expiry. The agent never holds a static credential.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Expired state</h3>
+          <p>Surfaces the last-known expiry time and Vault connectivity as the likely cause. Workload is blocked — not silently using a stale SVID.</p>
+        </div>
+      `,
+    },
+    {
+      id: 'uc1-token-exchange',
+      title: 'UC1 — Token Exchange',
+      subtitle: 'JWT-SVID exchanged at the Authorization Server for a scoped OAuth JWT.',
+      stageNumber: 'UC1 — Step 3',
+      states: {
+        'Request':          TokenExchangeRequest,
+        'OAuth JWT minted': TokenExchangeOAuthJwtMinted,
+        'Denied':           TokenExchangeDenied,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>RFC 8693 token exchange</h3>
+          <p>The SVID is consumed at the Authorization Server. Only the scoped OAuth JWT crosses further service boundaries. The SVID is not forwarded.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Denied state</h3>
+          <p>Returns the specific SPIFFE ID that failed. No fallback credential is issued. The agent is blocked until the SPIFFE ID is registered.</p>
+        </div>
+      `,
+    },
+    {
+      id: 'uc1-vault-resource',
+      title: 'UC1 — Vault Resource Request',
+      subtitle: 'Agent presents OAuth JWT to Vault resource server. Receives only the secrets its policy permits.',
+      stageNumber: 'UC1 — Step 4',
+      states: {
+        'Pending':          VaultResourceRequestPending,
+        'Secret delivered': VaultResourceSecretDelivered,
+        'Policy denied':    VaultResourcePolicyDenied,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>Tokenless Vault resource server</h3>
+          <p>No Vault token is held by the agent at any point. The chain is: cloud metadata → SVID → OAuth JWT → secret. The OAuth JWT is the only credential presented to Vault.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Policy denied</h3>
+          <p>Vault returns the denied path and the policy rule that blocked it. Operator does not need to reverse-engineer the policy from a generic 403.</p>
+        </div>
+      `,
+    },
+    {
+      id: 'uc1-agent-registry',
+      title: 'UC1 — Agent Registry',
+      subtitle: 'Platform view of registered agents — SPIFFE IDs, attestation methods, last-seen timestamps.',
+      stageNumber: 'UC1 — Step 5',
+      states: {
+        'Active':    AgentRegistryActive,
+        'Suspended': AgentRegistrySuspended,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>Fleet visibility</h3>
+          <p>Platform engineer sees every registered agent: node ID, SPIFFE ID, attestation method, last seen. Stale entries are identifiable without hunting audit logs.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Suspension</h3>
+          <p>Immediate effect. Future attestation from the node is rejected before a SVID is issued. Existing SVIDs expire at their TTL — no forced revocation gap.</p>
+        </div>
+      `,
+    },
+
+    /* ── UC2: Infra Attestation ─────────────────────────────────── */
+    {
+      id: 'uc2-ek-enrollment',
+      title: 'UC2 — EK Enrollment',
+      subtitle: 'Platform engineer registers a host\'s TPM Endorsement Key before provisioning.',
+      stageNumber: 'UC2 — Step 1',
+      states: {
+        'Empty':      EkRegistryEmpty,
+        'Registered': EkRegistered,
+        'Conflict':   EkConflict,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>Out-of-band enrollment</h3>
+          <p>EK registration happens before the host is deployed. Only registered EKs can attest. Unregistered hosts are rejected at the attestation step — not at SVID issuance.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Conflict state</h3>
+          <p>Attempting to register an existing EK returns the original enrollment record. Prevents silent overwrite of an existing host identity.</p>
+        </div>
+      `,
+    },
+    {
+      id: 'uc2-tpm-attestation',
+      title: 'UC2 — TPM Attestation',
+      subtitle: 'Vault Agent presents a TPM 2.0 quote. Vault verifies against enrolled EK.',
+      stageNumber: 'UC2 — Step 2',
+      states: {
+        'In progress': TpmAttestationInProgress,
+        'Complete':    TpmAttestationComplete,
+        'Failed':      TpmAttestationFailed,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>Nonce challenge</h3>
+          <p>Vault issues a time-bound nonce. The agent signs with the TPM Attestation Key. Stale quotes are rejected — replay attacks are blocked at the challenge layer.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Failed state</h3>
+          <p>Returns which check failed: stale nonce, EK not enrolled, or quote mismatch. Platform engineer receives the specific EK fingerprint and failure type.</p>
+        </div>
+      `,
+    },
+    {
+      id: 'uc2-x509-svid',
+      title: 'UC2 — X.509 SVID Issued',
+      subtitle: 'Vault mints an X.509 SVID for the TPM-attested host. SPIFFE ID in URI SAN.',
+      stageNumber: 'UC2 — Step 3',
+      states: {
+        'Issued':  X509SvidIssued,
+        'Details': X509SvidDetails,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>Spec compliance visible</h3>
+          <p>The details view confirms cA=false, exactly one URI SAN, correct key usage flags. Security engineers can verify spec compliance without parsing PEM manually.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Auto-renewal</h3>
+          <p>Vault Agent replaces the SVID before TTL expires. The host never holds an expired certificate. CA rotation is handled automatically via trust bundle update.</p>
+        </div>
+      `,
+    },
+    {
+      id: 'uc2-mtls',
+      title: 'UC2 — mTLS Service Mesh',
+      subtitle: 'On-prem workload presents X.509 SVID in mTLS handshake. Peer validates offline.',
+      stageNumber: 'UC2 — Step 4',
+      states: {
+        'Handshake': MtlsHandshake,
+        'Verified':  MtlsVerified,
+        'Failed':    MtlsFailed,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>Offline validation</h3>
+          <p>Peers fetch the trust bundle once and cache locally. Vault is not called at handshake time. The verification is purely cryptographic — no runtime Vault dependency.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Fails closed</h3>
+          <p>Any validation error — expired cert, CA not in bundle, invalid SPIFFE ID format — blocks the connection. No fallback to unverified TLS.</p>
+        </div>
+      `,
+    },
+    {
+      id: 'uc2-spiffe-auth',
+      title: 'UC2 — Vault SPIFFE Auth',
+      subtitle: 'Workload presents X.509 SVID to Vault SPIFFE auth method. Receives token or dynamic cloud credential.',
+      stageNumber: 'UC2 — Step 5',
+      states: {
+        'Request':            VaultSpiffeAuthRequest,
+        'Granted':            VaultSpiffeAuthGranted,
+        'Dynamic credential': VaultSpiffeDynamicCredential,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>Cross-cluster identity</h3>
+          <p>The SVID issued by one Vault is accepted as auth on another Vault. SPIFFE ID maps to entity alias, entity alias maps to policy. One portable identity thread.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Dynamic credential</h3>
+          <p>SVID exchanged directly for a short-lived AWS/GCP/Azure credential. No static cloud key on the host. The chain is: TPM → SVID → cloud credential.</p>
+        </div>
+      `,
+    },
+
+    /* ── UC3: Kubernetes Workloads ─────────────────────────────── */
+    {
+      id: 'uc3-k8s-auth',
+      title: 'UC3 — Kubernetes Auth',
+      subtitle: 'Pod presents projected service account token. Vault validates against K8s OIDC.',
+      stageNumber: 'UC3 — Step 1',
+      states: {
+        'Token presented': K8sAuthTokenPresented,
+        'Bound':           K8sAuthBound,
+        'Unbound SA':      K8sAuthUnboundSA,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>No static secret in pod spec</h3>
+          <p>The projected service account token is issued by Kubernetes, scoped to Vault's audience. No secret is placed in the pod spec or environment variables.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Unbound SA state</h3>
+          <p>Returns the namespace and service account name that failed binding. Platform engineer sees exactly which service account needs a role.</p>
+        </div>
+      `,
+    },
+    {
+      id: 'uc3-svid-filesystem',
+      title: 'UC3 — SVID to Filesystem',
+      subtitle: 'Vault Agent writes X.509 SVID files to the pod\'s configured mount path.',
+      stageNumber: 'UC3 — Step 2',
+      states: {
+        'Empty':              SvidMountEmpty,
+        'Written':            SvidWritten,
+        'Permission denied':  SvidPermissionDenied,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>No Vault SDK in application</h3>
+          <p>Vault Agent handles auth, minting, renewal, and file write. The workload reads a file — it never calls Vault. The SVID lifecycle is invisible to the application.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Atomic write</h3>
+          <p>Files are replaced atomically. No pod restart required on renewal. Istio sidecar picks up the new certificate on the next inotify event.</p>
+        </div>
+      `,
+    },
+    {
+      id: 'uc3-istio-mtls',
+      title: 'UC3 — Istio mTLS',
+      subtitle: 'Istio sidecars use Vault-issued X.509 SVIDs for all mesh traffic. No Istio CA required.',
+      stageNumber: 'UC3 — Step 3',
+      states: {
+        'Mesh peers':    IstioMtlsMeshPeers,
+        'All verified':  IstioMtlsAllVerified,
+        'Trust mismatch': IstioMtlsTrustMismatch,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>No Istio CA</h3>
+          <p>Istio reads the cert and key files written by Vault Agent. Its self-signed identity is replaced by the Vault-issued SVID. The trust boundary is the Vault trust domain — not the Istio mesh boundary.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Trust mismatch</h3>
+          <p>Post-rotation, peers holding SVIDs signed by the old CA are flagged. Resolution is waiting for Vault Agent's renewal cycle — no manual re-issuance needed.</p>
+        </div>
+      `,
+    },
+    {
+      id: 'uc3-trust-bundle',
+      title: 'UC3 — Trust Bundle Distribution',
+      subtitle: 'Vault hosts the trust bundle. All mesh participants fetch once and cache locally.',
+      stageNumber: 'UC3 — Step 4',
+      states: {
+        'Live':               TrustBundleLive,
+        'Federation partner': TrustBundleFederationPartner,
+        'Stale':              TrustBundleStale,
+      },
+      annotation: `
+        <div class="ann-block">
+          <h3>Tokenless fetch</h3>
+          <p>Any SPIFFE-aware consumer retrieves the bundle without Vault credentials. Verifiers, Istio sidecars, and external federation partners all use the same endpoint.</p>
+        </div>
+        <div class="ann-block">
+          <h3>Federation partner</h3>
+          <p>Platform engineer registers a partner Vault cluster's bundle endpoint. SVIDs from the partner are accepted in mTLS connections within this trust domain. SPIFFE federation without SPIRE.</p>
+        </div>
+      `,
+    },
+
     /* ── Prototype ─────────────────────────────────────────────── */
     {
       id: 'pe-prototype',
