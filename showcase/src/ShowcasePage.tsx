@@ -145,21 +145,46 @@ export function ShowcasePage({ config }: ShowcasePageProps) {
         const panel = document.getElementById('panel-' + k);
         if (panel) panel.classList.toggle('active', k === key);
       });
-      document.querySelectorAll<HTMLElement>('.persona-tab').forEach((tab, i) => {
+      document.querySelectorAll<HTMLElement>('#persona-tabs .persona-tab').forEach((tab, i) => {
         const keys = ['pe', 'dev', 'sec'];
         tab.classList.toggle('active', keys[i] === key);
       });
-      // Re-observe fade targets in the newly shown panel
       document.querySelectorAll<HTMLElement>('#panel-' + key + ' .fade-target').forEach((el) => {
         fadeObserver.observe(el);
       });
     };
+
+    const makeUcSwitcher = (tabsId: string, panelIds: string[]) => (id: string) => {
+      document.querySelectorAll<HTMLElement>('#' + tabsId + ' .persona-tab').forEach((tab, i) => {
+        tab.classList.toggle('active', panelIds[i] === id);
+      });
+      panelIds.forEach((pid) => {
+        const panel = document.getElementById(pid);
+        if (panel) panel.classList.toggle('active', pid === id);
+      });
+      document.querySelectorAll<HTMLElement>('#' + id + ' .fade-target').forEach((el) => {
+        fadeObserver.observe(el);
+      });
+    };
+
+    w.switchUc1Step = makeUcSwitcher('uc1-steps-tabs', [
+      'uc1-step-attest', 'uc1-step-svid', 'uc1-step-exchange', 'uc1-step-resource', 'uc1-step-registry',
+    ]);
+    w.switchUc2Step = makeUcSwitcher('uc2-steps-tabs', [
+      'uc2-step-ek', 'uc2-step-tpm', 'uc2-step-svid', 'uc2-step-mtls', 'uc2-step-auth',
+    ]);
+    w.switchUc3Step = makeUcSwitcher('uc3-steps-tabs', [
+      'uc3-step-k8s', 'uc3-step-fs', 'uc3-step-istio', 'uc3-step-bundle',
+    ]);
 
     return () => {
       fadeObserver.disconnect();
       delete w.toggleCard;
       delete w.scrollToMilestone;
       delete w.switchPersona;
+      delete w.switchUc1Step;
+      delete w.switchUc2Step;
+      delete w.switchUc3Step;
     };
   }, [config.preamble]);
 

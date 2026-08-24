@@ -1174,39 +1174,6 @@ const preamble = /* html */ `
   }
 </style>
 
-<script>
-  function switchUc1Step(id) {
-    document.querySelectorAll('#uc1-steps-tabs .persona-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('#uc1-step-attest, #uc1-step-svid, #uc1-step-exchange, #uc1-step-resource, #uc1-step-registry').forEach(p => p.classList.remove('active'));
-    var tabs = document.querySelectorAll('#uc1-steps-tabs .persona-tab');
-    var ids = ['uc1-step-attest','uc1-step-svid','uc1-step-exchange','uc1-step-resource','uc1-step-registry'];
-    var idx = ids.indexOf(id);
-    if (idx >= 0) tabs[idx].classList.add('active');
-    var el = document.getElementById(id);
-    if (el) el.classList.add('active');
-  }
-  function switchUc2Step(id) {
-    document.querySelectorAll('#uc2-steps-tabs .persona-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('#uc2-step-ek, #uc2-step-tpm, #uc2-step-svid, #uc2-step-mtls, #uc2-step-auth').forEach(p => p.classList.remove('active'));
-    var tabs = document.querySelectorAll('#uc2-steps-tabs .persona-tab');
-    var ids = ['uc2-step-ek','uc2-step-tpm','uc2-step-svid','uc2-step-mtls','uc2-step-auth'];
-    var idx = ids.indexOf(id);
-    if (idx >= 0) tabs[idx].classList.add('active');
-    var el = document.getElementById(id);
-    if (el) el.classList.add('active');
-  }
-  function switchUc3Step(id) {
-    document.querySelectorAll('#uc3-steps-tabs .persona-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('#uc3-step-k8s, #uc3-step-fs, #uc3-step-istio, #uc3-step-bundle').forEach(p => p.classList.remove('active'));
-    var tabs = document.querySelectorAll('#uc3-steps-tabs .persona-tab');
-    var ids = ['uc3-step-k8s','uc3-step-fs','uc3-step-istio','uc3-step-bundle'];
-    var idx = ids.indexOf(id);
-    if (idx >= 0) tabs[idx].classList.add('active');
-    var el = document.getElementById(id);
-    if (el) el.classList.add('active');
-  }
-</script>
-
 <!-- =========== USE CASE JOURNEYS =========== -->
 
 <!-- UC1 -->
