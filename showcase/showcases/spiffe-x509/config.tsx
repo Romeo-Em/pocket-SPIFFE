@@ -2425,6 +2425,77 @@ template {
     </div>
   </div>
 </div>
+
+<!-- =========== WIREFRAME PAGES =========== -->
+<div class="fade-target" id="wireframes-nav" style="padding: 2rem 0 3rem;">
+  <style>
+    .wf-nav-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      max-width: 800px;
+    }
+    .wf-nav-card {
+      border: 1px solid var(--z-border-subtle);
+      border-radius: 6px;
+      padding: 1.5rem 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      background: var(--z-bg);
+    }
+    .wf-nav-card-title {
+      font-family: var(--z-font-sans);
+      font-size: var(--z-text-lg);
+      font-weight: 600;
+      color: var(--z-text-primary);
+      margin: 0;
+    }
+    .wf-nav-card-tags {
+      font-family: var(--z-font-mono);
+      font-size: var(--z-text-xs);
+      color: var(--z-text-helper);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .wf-nav-card-count {
+      font-family: var(--z-font-sans);
+      font-size: var(--z-text-sm);
+      color: var(--z-text-secondary);
+      flex: 1;
+    }
+    .wf-nav-card-link {
+      display: inline-block;
+      margin-top: 0.75rem;
+      font-family: var(--z-font-mono);
+      font-size: var(--z-text-sm);
+      color: var(--z-text-primary);
+      text-decoration: none;
+      border-bottom: 1px solid var(--z-border-subtle);
+      padding-bottom: 1px;
+    }
+    .wf-nav-card-link:hover {
+      border-bottom-color: var(--z-text-primary);
+    }
+  </style>
+  <div style="padding: 0 2rem;">
+    <div class="story-label" style="margin-bottom: 1rem;">Wireframes</div>
+    <div class="wf-nav-grid">
+      <div class="wf-nav-card">
+        <div class="wf-nav-card-title">Use Case Wireframes</div>
+        <div class="wf-nav-card-tags">UC1 &middot; UC2 &middot; UC3</div>
+        <div class="wf-nav-card-count">14 screens across agentic identity, infra attestation, and Kubernetes workloads.</div>
+        <a href="./use-cases.html" class="wf-nav-card-link">View wireframes &rarr;</a>
+      </div>
+      <div class="wf-nav-card">
+        <div class="wf-nav-card-title">User Journey Wireframes</div>
+        <div class="wf-nav-card-tags">PE &middot; Dev &middot; Sec</div>
+        <div class="wf-nav-card-count">15 screens across the platform engineer, app developer, and security engineer journeys.</div>
+        <a href="./user-journey.html" class="wf-nav-card-link">View wireframes &rarr;</a>
+      </div>
+    </div>
+  </div>
+</div>
 `;
 
 export const config: ShowcaseConfig = {
@@ -2449,9 +2520,13 @@ export const config: ShowcaseConfig = {
     { id: 'uc1-agentic-identity',   label: 'UC1 — Agentic Identity' },
     { id: 'uc2-infra-attestation',  label: 'UC2 — Infra Attestation' },
     { id: 'uc3-kubernetes-workloads', label: 'UC3 — Kubernetes Workloads' },
-    { id: 'pe-prototype',           label: 'PE Prototype' },
+    { id: 'wireframes-nav',         label: 'Wireframes' },
   ],
-  sections: [
+  sections: [],
+};
+
+/* ── Sections exported separately for sub-page use ─────────── */
+export const allSections = [
     /* ── UC1: Agentic Identity ─────────────────────────────────── */
     {
       id: 'uc1-attestation',
@@ -3070,5 +3145,4 @@ export const config: ShowcaseConfig = {
         </div>
       `,
     },
-  ],
-};
+];

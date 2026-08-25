@@ -4,7 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run build:index && npm run build:use-cases && npm run build:user-journey",
+    "build:index": "vite build",
+    "build:use-cases": "SHOWCASE_ENTRY=use-cases vite build --emptyOutDir false",
+    "build:user-journey": "SHOWCASE_ENTRY=user-journey vite build --emptyOutDir false",
     "preview": "vite preview"
   },
   "dependencies": {

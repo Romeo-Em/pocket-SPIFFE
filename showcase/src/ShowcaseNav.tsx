@@ -69,12 +69,31 @@ export interface ShowcaseNavProps {
   sections: ShowcaseSection[];
   activeId?: string;
   preambleNav?: PreambleNavItem[];
+  backLink?: { href: string; label: string };
 }
 
-export function ShowcaseNav({ sections, activeId, preambleNav }: ShowcaseNavProps) {
+export function ShowcaseNav({ sections, activeId, preambleNav, backLink }: ShowcaseNavProps) {
   return (
     <nav style={navContainer} aria-label="Showcase navigation">
       <ul style={listStyle}>
+        {backLink && (
+          <li style={{ marginBottom: 16 }}>
+            <a
+              href={backLink.href}
+              style={{
+                fontFamily: 'var(--z-font-mono)',
+                fontSize: 'var(--z-text-xs)',
+                color: 'var(--z-text-helper)',
+                textDecoration: 'none',
+                letterSpacing: '0.08em',
+                display: 'block',
+                padding: '4px 0',
+              }}
+            >
+              &larr; {backLink.label}
+            </a>
+          </li>
+        )}
         {preambleNav && preambleNav.length > 0 && (
           <>
             <li style={groupLabel}>Product Thinking</li>

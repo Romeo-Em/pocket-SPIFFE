@@ -28,4 +28,6 @@ export interface ShowcaseConfig {
   /** Nav items for the preamble section. Each id must match an anchor in the preamble HTML. */
   preambleNav?: PreambleNavItem[];
   sections: ShowcaseSection[];
+  /** Back link shown at the top of the nav and above the hero header on sub-pages. */
+  backLink?: { href: string; label: string };
 }

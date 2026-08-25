@@ -198,9 +198,27 @@ export function ShowcasePage({ config }: ShowcasePageProps) {
 
   return (
     <div style={pageStyle}>
-      <ShowcaseNav sections={config.sections} activeId={activeId} preambleNav={config.preambleNav} />
+      <ShowcaseNav sections={config.sections} activeId={activeId} preambleNav={config.preambleNav} backLink={config.backLink} />
 
       <main style={mainContent}>
+        {/* Back link — shown on sub-pages */}
+        {config.backLink && (
+          <div style={{ marginBottom: 24 }}>
+            <a
+              href={config.backLink.href}
+              style={{
+                fontFamily: 'var(--z-font-mono)',
+                fontSize: 'var(--z-text-sm)',
+                color: 'var(--z-text-secondary)',
+                textDecoration: 'none',
+                letterSpacing: '0.04em',
+              }}
+            >
+              &larr; {config.backLink.label}
+            </a>
+          </div>
+        )}
+
         {/* Hero header */}
         <header>
           <div style={metaLine}>
@@ -226,7 +244,7 @@ export function ShowcasePage({ config }: ShowcasePageProps) {
         )}
 
         {/* Wireframes heading — only shown when there are wireframe sections */}
-        {config.preamble && config.sections.length > 0 && (
+        {config.sections.length > 0 && (
           <>
             <hr style={separator} />
             <h2 style={{

@@ -4,7 +4,6 @@ import { viteSingleFile } from 'vite-plugin-singlefile'
 import path from 'path'
 import fs from 'fs'
 
-// Read the outputName from the active showcase config.
 function readOutputName(): string {
   const configPath = path.resolve(__dirname, 'showcases/spiffe-x509/config.tsx')
   const src = fs.readFileSync(configPath, 'utf-8')
@@ -14,14 +13,24 @@ function readOutputName(): string {
 
 const outputName = readOutputName()
 
-// Plugin that renames index.html to the configured output name after build
+const entry = process.env.SHOWCASE_ENTRY ?? 'index'
+
+const entryMap: Record<string, { html: string; rename?: string }> = {
+  index:        { html: 'index.html',        rename: `${outputName}.html` },
+  'use-cases':  { html: 'use-cases.html' },
+  'user-journey': { html: 'user-journey.html' },
+}
+
+const current = entryMap[entry] ?? entryMap['index']
+
 function renameOutput(): import('vite').Plugin {
   return {
     name: 'rename-output',
     closeBundle() {
+      if (!current.rename) return
       const distDir = path.resolve(__dirname, 'dist')
-      const src = path.join(distDir, 'index.html')
-      const dest = path.join(distDir, `${outputName}.html`)
+      const src = path.join(distDir, current.html)
+      const dest = path.join(distDir, current.rename)
       if (fs.existsSync(src)) {
         fs.renameSync(src, dest)
       }
@@ -46,6 +55,7 @@ export default defineConfig({
     assetsInlineLimit: Infinity,
     cssCodeSplit: false,
     rollupOptions: {
+      input: path.resolve(__dirname, current.html),
       output: {
         inlineDynamicImports: true,
       },
