@@ -1,0 +1,42 @@
+List of conversation has increased 
+	- SPIFFE took off with Agentic 
+	- Auth compliments SPIRE 
+	- SEs started talking about 
+
+Messaging to NAB, MacQuerie, Westpac 
+	- What is SPIFFE, SPIRE, and Vault 
+	- Main message is why do you need SPIRE 
+
+Maquarie Bank  
+	- Banking instance using GCP Service Accounts, need to access other clouds, platform agnostic workload identity. Vault to create identity tokens and put in meta data there. 
+	- DevOps Team: Agentic Identities 
+	- mTLS is the biggest usecase 
+	- Vault has an issuer and broaker 
+
+Why even do workload identity? You have a platform ID 
+
+Agentic convos are early - 
+
+They didn't know what Vault can do in the space 
+	- 4 customers are interested 
+
+X509 is most specific for MTLS 
+	- Isstio - using SPIRE's X509 SVIDs 
+	- X509 is only mtls not a security 
+
+X509
+	- Mtls primarily 
+	- How it fits into TPM Auth 
+
+Interested in 
+NAB is using SPIFFE with Istio 
+
+Use it as an Identity broker 
+
+Ambient mode 
+
+SPIFFE it becomes an identity 
+
+
+Every customer is using 
+	- mTLS 
