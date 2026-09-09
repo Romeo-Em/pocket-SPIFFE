@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vault SPIFFE  — An Honest Assessment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAFBFC;
+    --bg-surface: #FFFFFF;
+    --bg-surface-raised: #F0F2F5;
+    --bg-surface-hover: #F5F6F8;
+    --border: #D0D5DD;
+    --border-subtle: #E2E6EB;
+    --text-primary: #1A1A2E;
+    --text-secondary: #4A5568;
+    --text-muted: #7A8599;
+    --accent-blue: #2B6CB0;
+    --accent-blue-dim: #BEE3F8;
+    --accent-green: #25855A;
+    --accent-green-dim: #C6F6D5;
+    --accent-amber: #B7791F;
+    --accent-amber-dim: #FEFCBF;
+    --accent-red: #C53030;
+    --accent-red-dim: #FED7D7;
+    --accent-purple: #6B46C1;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --mono: 'DM Mono', 'SF Mono', monospace;
+    --sans: 'DM Sans', -apple-system, sans-serif;
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { font-size: 18px; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+  body { background: var(--bg); color: var(--text-primary); font-family: var(--sans); line-height: 1.6; overflow-x: hidden; }
+
+  a { color: var(--accent-blue); }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--bg-surface-raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: 4px;
+    padding: 0.1em 0.4em;
+    color: var(--text-primary);
+  }
+
+  /* === HEADER === */
+  .header { padding: 4rem 2rem 3rem; max-width: 900px; margin: 0 auto; position: relative; }
+  .header::after { content: ''; position: absolute; bottom: 0; left: 2rem; right: 2rem; height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); }
+  .header-meta { font-family: var(--mono); font-size: 0.78rem; color: var(--text-muted); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1.5rem; }
+  .header-meta span { margin-right: 2rem; }
+  .header h1 { font-family: var(--serif); font-size: clamp(2rem, 5vw, 3rem); font-weight: 400; line-height: 1.2; margin-bottom: 1rem; }
+  .header-subtitle { font-size: 1.1rem; color: var(--text-secondary); line-height: 1.7; font-weight: 300; }
+  .header-sources { margin-top: 1.5rem; font-size: 0.88rem; color: var(--text-muted); line-height: 1.7; }
+  .header-sources code { font-size: 0.82rem; }
+
+  /* === TOC === */
+  .toc-wrap { max-width: 900px; margin: 0 auto; padding: 2.5rem 2rem; }
+  .toc-heading { font-family: var(--mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 1rem; }
+  .toc { list-style: none; columns: 2; column-gap: 2rem; }
+  .toc li { break-inside: avoid; margin-bottom: 0.5rem; }
+  .toc a { text-decoration: none; color: var(--text-secondary); font-size: 0.92rem; display: flex; gap: 0.5rem; }
+  .toc a:hover { color: var(--accent-blue); }
+  .toc .toc-num { font-family: var(--mono); color: var(--text-muted); font-size: 0.82rem; min-width: 1.4rem; }
+
+  /* === SECTION === */
+  .section { max-width: 900px; margin: 0 auto; padding: 2.5rem 2rem; }
+  .section + .section { border-top: 1px solid var(--border-subtle); }
+  .section-eyebrow { font-family: var(--mono); font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.75rem; }
+  .section h2 { font-family: var(--serif); font-size: 1.9rem; font-weight: 400; margin-bottom: 1.25rem; line-height: 1.25; }
+  .section h3 { font-family: var(--sans); font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+  .section p { font-size: 1rem; color: var(--text-secondary); line-height: 1.75; margin-bottom: 1rem; font-weight: 300; }
+  .section p:first-of-type { font-size: 1.02rem; }
+  .section ul, .section ol { margin: 0 0 1rem 1.4rem; color: var(--text-secondary); font-weight: 300; }
+  .section li { margin-bottom: 0.6rem; line-height: 1.7; }
+  .section strong { color: var(--text-primary); font-weight: 600; }
+  .section em { font-style: italic; }
+
+  /* === CALLOUT BLOCKS (critique / claim / reality / gap) === */
+  .callout { border-radius: 8px; padding: 1.1rem 1.3rem; margin: 0 0 1rem; border: 1px solid var(--border-subtle); background: var(--bg-surface); }
+  .callout-label { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.5rem; display: block; font-weight: 500; }
+  .callout p { margin-bottom: 0; font-size: 0.95rem; }
+  .callout.critique { border-left: 3px solid var(--text-muted); }
+  .callout.critique .callout-label { color: var(--text-muted); }
+  .callout.claim { border-left: 3px solid var(--accent-blue); }
+  .callout.claim .callout-label { color: var(--accent-blue); }
+  .callout.reality { border-left: 3px solid var(--accent-amber); }
+  .callout.reality .callout-label { color: var(--accent-amber); }
+  .callout.gap { border-left: 3px solid var(--accent-red); }
+  .callout.gap .callout-label { color: var(--accent-red); }
+  .callout.contradiction { border-left: 3px solid var(--accent-purple); background: #FBF9FE; }
+  .callout.contradiction .callout-label { color: var(--accent-purple); }
+  .callout.honest { border-left: 3px solid var(--accent-green); }
+  .callout.honest .callout-label { color: var(--accent-green); }
+
+  /* === STATUS BADGES === */
+  .badge { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.28rem 0.65rem; border-radius: 999px; font-weight: 500; white-space: nowrap; }
+  .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+  .badge.strong { background: var(--accent-green-dim); color: #1C6B47; }
+  .badge.strong::before { background: var(--accent-green); }
+  .badge.partial { background: var(--accent-amber-dim); color: #8A6116; }
+  .badge.partial::before { background: var(--accent-amber); }
+  .badge.roadmap { background: var(--accent-blue-dim); color: #1E4E80; }
+  .badge.roadmap::before { background: var(--accent-blue); }
+  .badge.none { background: var(--accent-red-dim); color: #9B2C2C; }
+  .badge.none::before { background: var(--accent-red); }
+
+  /* === SCORECARD TABLE === */
+  .scorecard { width: 100%; border-collapse: collapse; margin-bottom: 0.5rem; font-size: 0.92rem; }
+  .scorecard th { text-align: left; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border); }
+  .scorecard td { padding: 0.85rem 0.8rem; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); vertical-align: top; }
+  .scorecard tbody tr { cursor: pointer; }
+  .scorecard tr:hover td { background: var(--bg-surface-hover); }
+  .scorecard .num { font-family: var(--mono); color: var(--text-muted); width: 2rem; }
+  .scorecard .problem { color: var(--text-primary); font-weight: 500; width: 40%; }
+  .scorecard .problem a { text-decoration: none; color: inherit; }
+  .scorecard tr:hover .problem a { color: var(--accent-blue); }
+
+  /* === SHIP STATUS TABLE === */
+  .status-table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 8px; overflow: hidden; }
+  .status-table th { text-align: left; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); padding: 0.7rem 0.9rem; background: var(--bg-surface-raised); }
+  .status-table td { padding: 0.7rem 0.9rem; border-top: 1px solid var(--border-subtle); color: var(--text-secondary); }
+  .status-table td:first-child { color: var(--text-primary); font-weight: 500; }
+
+  /* === NUMBERED PROBLEM CARD === */
+  .problem-num-badge { font-family: var(--serif); font-size: 1.1rem; color: var(--bg-surface); background: var(--text-primary); width: 2.4rem; height: 2.4rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-right: 0.75rem; flex-shrink: 0; }
+  .section-heading-row { display: flex; align-items: center; margin-bottom: 1.25rem; gap: 0; }
+  .section-heading-row h2 { margin-bottom: 0; }
+
+  /* === BOTTOM LINE / CLOSING === */
+  .bottom-line { background: var(--text-primary); color: #EDEFF3; }
+  .bottom-line .section-eyebrow { color: #9CA8BF; }
+  .bottom-line h2 { color: #FFFFFF; }
+  .bottom-line p { color: #C9CFDC; }
+  .bottom-line strong { color: #FFFFFF; }
+
+  .open-q { list-style: none; margin-left: 0; }
+  .open-q li { position: relative; padding-left: 1.5rem; margin-bottom: 0.9rem; }
+  .open-q li::before { content: '?'; position: absolute; left: 0; top: 0; font-family: var(--mono); color: var(--accent-blue); font-weight: 500; }
+
+  footer { max-width: 900px; margin: 0 auto; padding: 3rem 2rem 5rem; }
+  footer p { font-family: var(--mono); font-size: 0.78rem; color: var(--text-muted); letter-spacing: 0.04em; }
+
+  @media (max-width: 640px) {
+    .toc { columns: 1; }
+    html { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-meta"><span>Vault SPIFFE Strategy</span><span>Created 2026-09-08</span><span>Status: Draft</span></div>
+  <h1>Vault SPIFFE - An Honest Assessment</h1>
+  <p class="header-subtitle">A problem-by-problem review of whether Vault's SPIFFE work actually addresses the gaps described in the "Everyone Wants SPIFFE" critique — and an equally direct account of where it doesn't.</p>
+  <p class="header-sources"><strong>Sources reviewed:</strong> <code>EVERYONE-WANTS-SPIFFEE-.md</code> (the critique), all files in <code>example/01.meetings/</code>, all files in <code>example/02.strategy/</code>, <code>VLT-X509 Mining in SPIFFE Secrets Engine.md</code>, <code>001.26.07.25.PDR-WireframePlan-SPIFFE-PlatformEngineer.md</code>.</p>
+</div>
+
+<div class="toc-wrap">
+  <div class="toc-heading">On this page</div>
+  <ul class="toc">
+    <li><a href="#what-this-is"><span class="toc-num">·</span> What this doc is</a></li>
+    <li><a href="#clarification"><span class="toc-num">·</span> What "Vault SPIFFE" means</a></li>
+    <li><a href="#scorecard"><span class="toc-num">·</span> Scorecard</a></li>
+    <li><a href="#p1"><span class="toc-num">01</span> Ecosystem complexity</a></li>
+    <li><a href="#p2"><span class="toc-num">02</span> The SaaS problem</a></li>
+    <li><a href="#p3"><span class="toc-num">03</span> Legacy applications</a></li>
+    <li><a href="#p4"><span class="toc-num">04</span> On-premises attestation</a></li>
+    <li><a href="#p5"><span class="toc-num">05</span> CI/CD pipelines</a></li>
+    <li><a href="#p6"><span class="toc-num">06</span> Federation</a></li>
+    <li><a href="#p7"><span class="toc-num">07</span> Deployment timeline</a></li>
+    <li><a href="#p8"><span class="toc-num">08</span> Component maintenance risk</a></li>
+    <li><a href="#p9"><span class="toc-num">09</span> AI agent identity</a></li>
+    <li><a href="#p10"><span class="toc-num">10</span> Credential type gap</a></li>
+    <li><a href="#bottom-line"><span class="toc-num">·</span> Bottom line</a></li>
+    <li><a href="#open-questions"><span class="toc-num">·</span> Open questions</a></li>
+  </ul>
+</div>
+
+<div class="section" id="what-this-is">
+  <div class="section-eyebrow">What this doc is</div>
+  <p>The critique document argues that SPIFFE is a good standard but SPIRE is a multi-year infrastructure project that leaves the SaaS boundary, legacy applications, on-premises attestation, CI/CD, federation, and AI agent identity largely unsolved. This doc goes through each of those ten problems and asks, honestly: does Vault's SPIFFE work address it, partially address it, or not address it at all. Where Vault's own internal docs disagree with each other about how much is done, that's called out directly rather than resolved in Vault's favor.</p>
+  <p><strong>Who should read this:</strong> anyone deciding how to position Vault SPIFFE externally, and anyone deciding what to build next. This is not a marketing document. Several claims made in Vault's own positioning and vision docs are contradicted by its own milestone and priority docs, and that gap matters more than the pitch.</p>
+</div>
+
+<div class="section" id="clarification">
+  <div class="section-eyebrow">Clarification the source docs don't make cleanly</div>
+  <h2>"Vault SPIFFE" is not one feature</h2>
+  <p>Across the strategy docs it refers to at least four different things, and conflating them is the single biggest risk to an honest external claim:</p>
+  <ol>
+    <li><strong>SPIFFE Secrets Engine</strong> — Vault Enterprise, ships today. Mints <strong>JWT-SVIDs only</strong>. X.509 SVID minting is a proposed PRD (VLT-515), not shipped.</li>
+    <li><strong>SPIFFE Auth Method</strong> — Vault Enterprise, ships today. Consumes JWT- or X.509-SVIDs (from Vault or from an existing SPIRE deployment) and exchanges them for a Vault token.</li>
+    <li><strong>Vault as a SPIRE replacement / standalone identity provider</strong> — node and workload attestation, direct SVID issuance without a Vault token, a Workload API socket, trust bundle hosting for X.509. This is the aspirational vision described in <code>vault-as-spiffe-provider-priorities.md</code>, <code>-milestones.md</code>, and <code>spiffe-identity-provider-vision.md</code>. It is a <strong>roadmap</strong>, not a shipped product.</li>
+    <li><strong>Vault as a federation participant</strong> — the auth method can consume a trust bundle from an existing SPIRE Federation endpoint; the secrets engine hosts a JWT trust bundle other systems can trust. X.509 federation with SPIRE is explicitly out of scope until X.509 SVID support ships.</li>
+  </ol>
+  <p>Any claim below that says "Vault solves X" should be read as applying to a specific one of these four, not to "Vault SPIFFE" as an undifferentiated whole.</p>
+
+  <h3>Shipping status, for reference</h3>
+  <table class="status-table">
+    <thead><tr><th>Capability</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>JWT-SVID issuance (secrets engine)</td><td><span class="badge strong">Shipping</span></td></tr>
+      <tr><td>SPIFFE auth method (JWT + X.509 consumption)</td><td><span class="badge strong">Shipping</span></td></tr>
+      <tr><td>OIDC well-known + JWKS (JWT trust distribution)</td><td><span class="badge strong">Shipping</span></td></tr>
+      <tr><td>OAuth resource server + Agent Registry (agentic governance)</td><td><span class="badge partial">Private preview</span></td></tr>
+      <tr><td>TPM node attestation</td><td><span class="badge roadmap">In development · ~Oct (2.1)</span></td></tr>
+      <tr><td>X.509 SVID issuance</td><td><span class="badge roadmap">Roadmap · ~Jan</span></td></tr>
+      <tr><td>X.509 trust bundle endpoint</td><td><span class="badge roadmap">Roadmap · ~Jan</span></td></tr>
+      <tr><td>Workload API socket (Vault Agent)</td><td><span class="badge roadmap">Roadmap · ~Apr</span></td></tr>
+      <tr><td>Workload attestation (per-process)</td><td><span class="badge roadmap">Roadmap · ~Apr</span></td></tr>
+      <tr><td>SVID-direct issuance (no Vault token)</td><td><span class="badge roadmap">Roadmap · ~Jan</span></td></tr>
+      <tr><td><code>vault-spiffe-server</code> scoped binary</td><td><span class="badge none">Strategic future</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" id="scorecard">
+  <div class="section-eyebrow">At a glance</div>
+  <h2>Scorecard</h2>
+  <table class="scorecard">
+    <thead><tr><th class="num">#</th><th class="problem">Problem from the critique</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr onclick="location.href='#p1'"><td class="num">01</td><td class="problem"><a href="#p1">Ecosystem complexity (8-10 components)</a></td><td><span class="badge partial">Partial · mostly roadmap</span></td></tr>
+      <tr onclick="location.href='#p2'"><td class="num">02</td><td class="problem"><a href="#p2">The SaaS problem</a></td><td><span class="badge none">Not addressed by SPIFFE</span></td></tr>
+      <tr onclick="location.href='#p3'"><td class="num">03</td><td class="problem"><a href="#p3">The legacy application problem</a></td><td><span class="badge roadmap">Roadmap only</span></td></tr>
+      <tr onclick="location.href='#p4'"><td class="num">04</td><td class="problem"><a href="#p4">The on-premises problem</a></td><td><span class="badge strong">Strongest claim · unshipped</span></td></tr>
+      <tr onclick="location.href='#p5'"><td class="num">05</td><td class="problem"><a href="#p5">The CI/CD pipeline problem</a></td><td><span class="badge none">Not addressed at all</span></td></tr>
+      <tr onclick="location.href='#p6'"><td class="num">06</td><td class="problem"><a href="#p6">The federation problem</a></td><td><span class="badge partial">Partial · JWT only</span></td></tr>
+      <tr onclick="location.href='#p7'"><td class="num">07</td><td class="problem"><a href="#p7">"6-24 months to deploy"</a></td><td><span class="badge partial">Faster start, not parity</span></td></tr>
+      <tr onclick="location.href='#p8'"><td class="num">08</td><td class="problem"><a href="#p8">Component maintenance risk</a></td><td><span class="badge none">Not addressed</span></td></tr>
+      <tr onclick="location.href='#p9'"><td class="num">09</td><td class="problem"><a href="#p9">AI agent identity</a></td><td><span class="badge strong">2nd strongest · preview</span></td></tr>
+      <tr onclick="location.href='#p10'"><td class="num">10</td><td class="problem"><a href="#p10">The credential type gap</a></td><td><span class="badge partial">Vault-wide, not SPIFFE</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- PROBLEM 1 -->
+<div class="section" id="p1">
+  <div class="section-heading-row"><span class="problem-num-badge">01</span><h2>The ecosystem complexity problem</h2></div>
+  <div class="callout critique"><span class="callout-label">The critique</span><p>Production SPIRE requires 8-10 separately maintained components (server/agent, SPIFFE-Helper, CSI driver, Controller Manager, Envoy/SDS, service mesh, OPA, cert-manager, Tornjak, HSM/KMS, monitoring).</p></div>
+  <div class="callout claim"><span class="callout-label">What Vault claims</span><p>The proposed <code>vault-spiffe-server</code> binary would fold the secrets engine, trust bundle hosting, TPM/cloud/k8s attestation, workload attestation, SVID-direct issuance, and a Vault Agent Workload API socket into one deployable unit. <code>spiffe-identity-provider-vision.md</code> frames this directly as "the operational reach of SPIFFE without the burden of operating SPIRE."</p></div>
+  <div class="callout reality"><span class="callout-label">What's actually true today</span><p>That binary is Milestone 4, explicitly described as "not a near-term deliverable." Today, using Vault SPIFFE means running full Vault Enterprise, which is not a lighter operational footprint than SPIRE for a customer who doesn't already run Vault. For existing Vault customers, the marginal component count is lower — but that's a claim about existing customers, not a claim that Vault SPIFFE is inherently simpler than SPIRE.</p></div>
+  <div class="callout gap"><span class="callout-label">Not solved</span><p>Vault doesn't replace Envoy/SDS, a policy engine equivalent to OPA (Vault's HCL policy is a different mechanism serving a different layer), cert-manager, or a Tornjak-equivalent multi-cluster visibility tool. The vision doc's own "visibility &amp; reporting" item is listed as unbuilt.</p></div>
+  <div class="callout honest"><span class="callout-label">Honest read</span><p>The consolidation story is real for the mTLS-light, JWT-only use case, and aspirational for everything else. Since the critique itself notes that mTLS-based workload identity is "the majority of real SPIFFE deployments," and Vault's X.509 story doesn't ship until ~January, this claim is weaker than the vision docs suggest today.</p></div>
+</div>
+
+<!-- PROBLEM 2 -->
+<div class="section" id="p2">
+  <div class="section-heading-row"><span class="problem-num-badge">02</span><h2>The SaaS problem</h2></div>
+  <div class="callout critique"><span class="callout-label">The critique</span><p>SPIFFE has no path to Snowflake, Salesforce, GitHub, or Okta because those services speak OAuth and API keys, not SVIDs.</p></div>
+  <div class="callout claim"><span class="callout-label">What Vault claims</span><p>Nothing, directly. No file claims an SVID can authenticate to a third-party SaaS product.</p></div>
+  <div class="callout reality"><span class="callout-label">What's actually true</span><p>Vault's answer is adjacent, not native. A workload presents its SVID to Vault, and Vault's separate, non-SPIFFE dynamic secrets engines can then issue database credentials, cloud credentials, or PKI/SSH certs. This doesn't cross the SaaS boundary the critique describes — it's Vault's general-purpose secrets management capability, which exists independent of whether SPIFFE is involved at all.</p></div>
+  <div class="callout gap"><span class="callout-label">Not solved</span><p>There is no SVID-to-OAuth exchange for Salesforce, Slack, GitHub, Okta, or Datadog anywhere in these docs. This is a direct concession, not a rebuttal, of the critique's point. The honest framing: "SPIFFE doesn't solve this, and neither does Vault SPIFFE — but Vault as a broader secrets manager has always run a parallel, non-SPIFFE track for these credentials, which is the same answer SPIRE-adjacent teams already use today."</p></div>
+</div>
+
+<!-- PROBLEM 3 -->
+<div class="section" id="p3">
+  <div class="section-heading-row"><span class="problem-num-badge">03</span><h2>The legacy application problem</h2></div>
+  <div class="callout critique"><span class="callout-label">The critique</span><p>Applications that can't call the SPIFFE Workload API (Java monoliths, .NET on bare metal, COBOL, vendor software) can't participate without a sidecar like SPIFFE-Helper.</p></div>
+  <div class="callout claim"><span class="callout-label">What Vault claims</span><p>A future Vault Agent Workload API socket plus built-in Unix workload attestation (UID/GID/binary path) would let SPIFFE-native workloads and sidecars retrieve SVIDs from Vault Agent, similar to what SPIRE Agent + SPIFFE-Helper do combined.</p></div>
+  <div class="callout reality"><span class="callout-label">What's actually true</span><p>This is entirely roadmap — Priority 3 and Priority 4 in <code>vault-as-spiffe-provider-priorities.md</code>, targeted for ~April. Nothing ships today that makes it easier for a legacy application to get an identity from Vault than from SPIRE. Vault Agent today still requires the workload to actively authenticate through a configured auth method, not a transparent local socket.</p></div>
+  <div class="callout gap"><span class="callout-label">Not solved</span><p>No doc addresses vendor-locked or contractually-unmodifiable software specifically. Once the socket ships, the same fundamental problem the critique describes — a legacy binary has to discover and use a new local interface — still applies; Vault's version of this faces the identical adoption friction SPIFFE-Helper does today.</p></div>
+  <div class="callout honest"><span class="callout-label">Honest read</span><p>There is currently no meaningful difference between Vault and SPIRE for this problem. Both require future engineering work the customer doesn't have today.</p></div>
+</div>
+
+<!-- PROBLEM 4 -->
+<div class="section" id="p4">
+  <div class="section-heading-row"><span class="problem-num-badge">04</span><h2>The on-premises problem</h2></div>
+  <div class="callout critique"><span class="callout-label">The critique</span><p>Node attestation is easy in the cloud (signed instance metadata) and weak on-prem, where SPIRE falls back to TPM-based attestation or brittle process-level selectors.</p></div>
+  <p><strong>This is Vault's strongest, most substantiated claim.</strong> TPM 2.0-based attestation is the centerpiece of the on-prem story across nearly every strategy doc:</p>
+  <ul>
+    <li><code>SPIFFE-Strategy.md</code>: "TPM auth with attestation can solve Secret Zero for on-prem workloads."</li>
+    <li><code>vault-as-spiffe-provider-milestones.md</code>: "Vault Agent on a Linux VM uses the TPM 2.0 EK to prove the node's identity to Vault. No static bootstrap secret."</li>
+    <li><code>SPIFFE Case Studies — Trends &amp; Patterns.md</code> names on-prem attestation as "the dominant gap across all case studies," and states this is "precisely the gap TPM-backed hardware attestation in Vault addresses."</li>
+    <li>Real customer signal: DBS meeting notes describe the customer as "looking more closely at TPM-backed identity than SPIFFE today" and wanting a "TPM → SPIFFE workflow."</li>
+  </ul>
+  <div class="callout reality"><span class="callout-label">What's actually true</span><p>TPM node attestation is <strong>in development, targeting Vault 2.1 (~October)</strong>. It is not shipped as of these docs. Even once it ships, the first output is a Vault token plus certificate, <strong>not an SVID</strong> — SVID-direct issuance for on-prem workloads doesn't land until Milestone 2 (~January). And the initial capability only attests the <em>node</em>, not distinct workloads running on that node — per-process workload attestation is a separate, later milestone (~April). Windows is explicitly out of scope; this is "Linux + vTPM only" for now.</p></div>
+  <div class="callout contradiction"><span class="callout-label">Internal contradiction worth flagging</span><p><code>spiffe-vault-meeting-synthesis.md</code> states Vault does "90% of what SPIRE does" with "one gap" (workload attestation) — a much rosier framing than <code>vault-as-spiffe-provider-priorities.md</code>, which lists six separate, still-substantial gaps (X.509 SVIDs, X.509 trust bundle, Workload API socket, workload attestation, SVID-direct, and the scoped binary). The "90%" figure should not be repeated externally without qualifying which slice of the SPIFFE surface it covers.</p></div>
+  <div class="callout honest"><span class="callout-label">Honest read</span><p>Real customer demand exists and the hardware-rooted approach is technically credible, but it is not available today. Any external claim should say "in development, targeting Vault 2.1," not "solved."</p></div>
+</div>
+
+<!-- PROBLEM 5 -->
+<div class="section" id="p5">
+  <div class="section-heading-row"><span class="problem-num-badge">05</span><h2>The CI/CD pipeline problem</h2></div>
+  <div class="callout critique"><span class="callout-label">The critique</span><p>Ephemeral CI/CD runners don't run SPIRE agents by default, and reliable attestation for them is non-trivial.</p></div>
+  <div class="callout claim"><span class="callout-label">What Vault claims</span><p>Nothing. None of the strategy, milestone, priority, or positioning docs mention GitHub Actions runners, GitLab CI agents, ephemeral pipeline identity, or OIDC-federation-for-CI as a target scenario at all.</p></div>
+  <div class="callout gap"><span class="callout-label">Not solved</span><p>This is a complete, unaddressed gap in the current Vault SPIFFE narrative. The docs focus on agentic AI, on-prem VMs/bare-metal, and Kubernetes/cloud workloads — CI/CD pipelines are simply absent from the corpus. This should be stated plainly rather than papered over: Vault SPIFFE has no answer here today, and no roadmap commitment either.</p></div>
+</div>
+
+<!-- PROBLEM 6 -->
+<div class="section" id="p6">
+  <div class="section-heading-row"><span class="problem-num-badge">06</span><h2>The federation problem</h2></div>
+  <div class="callout critique"><span class="callout-label">The critique</span><p>Adding/removing trust domains requires config changes and restarts across every participant; JWKS key counts grow with the number of SPIRE servers and vendors impose undocumented limits (AWS STS ~100 keys, Confluent much fewer); Indeed Engineering hit real bugs debugging this in production.</p></div>
+  <div class="callout claim"><span class="callout-label">What Vault claims</span><p>Trust bundle hosting for JWT ships today (OIDC well-known endpoint, <code>.well-known/keys</code>, <code>trust_bundle/web</code>). The SPIFFE auth method can already consume a trust bundle from an existing SPIRE Federation endpoint, meaning Vault can participate as a federation consumer today for the JWT lane.</p></div>
+  <div class="callout gap"><span class="callout-label">What's explicitly not true</span><p>X.509 trust bundle hosting is a named, repeated gap. <code>vault-spiffe-secrets-engine.md</code> states plainly that federation with SPIRE <strong>is not possible today</strong> because it requires X.509 SVID support, which doesn't exist yet. The PRD for X.509 minting (VLT-515) puts federation with SPIRE explicitly <strong>out of scope for Milestone 1</strong> — worth noting that the same PRD document also writes acceptance criteria for a federation requirement before excluding it, which is an internal inconsistency in the PRD itself, not just a gap.</p></div>
+  <div class="callout gap"><span class="callout-label">Not solved at all</span><p>None of the critique's specific pain points (undocumented JWKS key-count limits, JWKS growth with multiple signing servers, the float-serialized-timestamp bug Indeed hit with AWS STS) are discussed anywhere in the Vault docs. Vault's Raft-HA cluster architecture may structurally reduce JWKS bloat compared to a federation of many independent SPIRE servers, but this is not analyzed or claimed anywhere — it would need real testing before being stated as a benefit.</p></div>
+  <div class="callout contradiction"><span class="callout-label">Internal contradiction worth flagging</span><p><code>vault-spiffe-positioning.md</code>'s two-server architecture diagram assumes trust bundle interoperability with other Vault clusters and third parties as already functional, but this is only true for the JWT lane. Most SPIRE-federation customers care about the X.509/mTLS lane, where Vault's own secrets-engine doc says federation isn't possible yet.</p></div>
+</div>
+
+<!-- PROBLEM 7 -->
+<div class="section" id="p7">
+  <div class="section-heading-row"><span class="problem-num-badge">07</span><h2>The "deployment takes 6-24 months" problem</h2></div>
+  <div class="callout critique"><span class="callout-label">The critique</span><p>Defakto's own documentation says small SPIRE deployments take 6-12 months and complex ones 12-24 months, even with a dedicated expert team.</p></div>
+  <div class="callout claim"><span class="callout-label">What Vault claims</span><p>Faster time-to-value, because "customers already have auth methods configured for attestation, and sets of policy" (PRD VLT-515 background) — i.e., existing Vault infrastructure gets reused rather than building SPIRE from zero. <code>SPIFFE-Strategy.md</code> states the explicit goal: "For most customers, Vault should remove the need to deploy and operate standalone SPIRE infrastructure."</p></div>
+  <div class="callout reality"><span class="callout-label">What's actually true</span><p>For an existing Vault customer wanting JWT-SVIDs today, this is plausible and fast — Milestone 0 requires no new engineering. But the <em>full</em> provider vision (attestation, X.509, Workload API, workload attestation) spans four milestones from now through ~April, which is itself 9+ months of engineering before Vault reaches anything resembling SPIRE feature parity. Milestone 3 (~April) is the point explicitly described as "drop-in comparable to SPIRE" — meaning Vault's own team does not consider the product SPIRE-comparable before then.</p></div>
+  <div class="callout honest"><span class="callout-label">Honest read</span><p>This is a real claim for a narrow use case (an existing Vault customer who only needs JWT-SVIDs) and an aspirational claim everywhere else. External positioning that speaks in the present tense ("Vault is the SPIFFE identity authority") without this qualifier would overstate what's true today.</p></div>
+</div>
+
+<!-- PROBLEM 8 -->
+<div class="section" id="p8">
+  <div class="section-heading-row"><span class="problem-num-badge">08</span><h2>Component maintenance risk (e.g. Tornjak)</h2></div>
+  <div class="callout critique"><span class="callout-label">The critique</span><p>SPIFFE ecosystem components have uneven maintenance quality — Tornjak's last major releases date to 2022-2023, with subsequent versions being mostly automated dependency bumps. Unmaintained security tooling accumulates risk over time (CNCF's own archival process exists because of this pattern).</p></div>
+  <div class="callout claim"><span class="callout-label">What Vault claims</span><p>Nothing directly. No doc mentions Tornjak, CSI driver versioning, or release-cadence risk as a named consideration.</p></div>
+  <div class="callout gap"><span class="callout-label">Not solved, not addressed</span><p>The closest thing to a response is implicit — consolidating capability inside a single, commercially-supported Vault Enterprise product plausibly reduces the "which of my nine components went stale" risk, since one vendor owns the release cadence. But this is not stated or analyzed anywhere in the corpus, and it cuts both ways: Vault's own new SPIFFE-provider subsystems are themselves new components Vault has to build and then maintain going forward. No doc discusses this self-critically.</p></div>
+</div>
+
+<!-- PROBLEM 9 -->
+<div class="section" id="p9">
+  <div class="section-heading-row"><span class="problem-num-badge">09</span><h2>The AI agent identity problem</h2></div>
+  <div class="callout critique"><span class="callout-label">The critique</span><p>Three categories of AI agent deployment (commercial AI with human-in-loop, custom agents with human-in-loop, fully autonomous agents) each have identity problems SPIFFE wasn't designed for — no concept of intent, delegation chain, or ephemeral task-scoped identity. Cites the Replit database-deletion incident and CSA survey data (only 23% of orgs have a formal agent identity strategy).</p></div>
+  <p><strong>This is Vault's second-strongest, most substantiated claim.</strong></p>
+  <ul>
+    <li>A three-layer agentic access architecture is described in <code>vault-spiffe-provider-use-cases.md</code>: node attestation to JWT-SVID, then token exchange with an authorization server using Rich Authorization Requests (RAR) and on-behalf-of/May Act delegation, then a Vault resource server enforcing an Agent Registry with ceiling policies and full audit trail ("user → agent → tool → resource → action → decision").</li>
+    <li>This directly targets Category 2 (custom agents with human-in-loop): RAR claims and ceiling-policy intersection are designed to bound an agent's access to the immediate task and expire automatically.</li>
+    <li>The architecture is explicitly designed around the credential-aggregation attack surface the critique's Replit example illustrates: the agent should not carry broad standing credentials, and the per-request flow doesn't produce a durable Vault token.</li>
+    <li>Real customer interest exists: DBS meeting notes describe wanting "On-Behalf-Of (OBO) / May Act delegation flows" scaling to "10,000+ agents/workloads."</li>
+    <li>The Agent Registry and audit-trail model also partially targets Category 1 — the audit gap the critique names is addressed by the attribution model, if implemented.</li>
+  </ul>
+  <div class="callout reality"><span class="callout-label">What's actually true</span><p>The entire agentic architecture is <strong>private preview</strong>, not GA. There is no HashiCorp-native Authorization Server yet — <code>vault-spiffe-provider-use-cases.md</code> lists this as an open question, meaning the AS step currently depends on third parties (IBM Verify, Keycloak proof-of-concept), an external dependency Vault doesn't fully own. SVID-direct issuance for agents is a January-target milestone, not shipped.</p></div>
+  <div class="callout gap"><span class="callout-label">Not solved</span><p>Category 3, fully autonomous agent-spawns-agent chains, is the weakest area even in Vault's own docs. No file discusses agent-to-agent delegation chains or the specific Solo.io concern quoted in the critique — "if identities are more fine-grained, and even potentially generated on the fly, how can you possibly write authorization policies around this?" Vault's ceiling-policy model bounds access for a known, registered agent; it doesn't clearly answer how policy gets written for identities generated dynamically at runtime.</p></div>
+  <div class="callout honest"><span class="callout-label">Honest read</span><p>This is real, differentiated design work, further along conceptually than anything else in this document — but it's private preview, has an unresolved external dependency (the AS), and its own authors flag open architectural questions. It should not be described as solved.</p></div>
+</div>
+
+<!-- PROBLEM 10 -->
+<div class="section" id="p10">
+  <div class="section-heading-row"><span class="problem-num-badge">10</span><h2>The credential type gap</h2></div>
+  <div class="callout critique"><span class="callout-label">The critique</span><p>OAuth client credentials, database passwords, API keys, Kerberos tickets, SSH keys, and cloud access keys all sit outside the SVID model and need separate lifecycle management, running in parallel with SPIFFE.</p></div>
+  <div class="callout claim"><span class="callout-label">What Vault claims — its strongest non-SPIFFE-native answer</span><p>"A workload presents its SVID to Vault... and Vault issues dynamic database credentials, cloud credentials, PKI certificates, SSH certs — short-lived, scoped, auto-rotated. No other SPIFFE provider also has a secrets engine" (<code>vault-spiffe-provider-use-cases.md</code>). <code>SPIFFE-Strategy.md</code> also describes explicit SVID-to-cloud-IAM exchange flows: AWS IAM Roles Anywhere via X.509 SVID, GCP Workload Identity Federation via JWT-SVID, Azure Workload Identity via JWT-SVID.</p></div>
+  <div class="callout reality"><span class="callout-label">What this actually is</span><p>The SVID becomes an authentication input into Vault's pre-existing, non-SPIFFE dynamic secrets engines. This is honest and real, but it's precise to note: this is Vault (the broader secrets management product) solving credential-type diversity, not SPIFFE solving it.</p></div>
+  <div class="callout gap"><span class="callout-label">Not solved</span><p>OAuth client credentials for SaaS (Salesforce, Slack, GitHub, Okta, Datadog) are not addressed — no SVID-to-OAuth-SaaS exchange exists. Kerberos tickets for on-prem Active Directory-integrated systems are not mentioned anywhere in the corpus.</p></div>
+  <div class="callout honest"><span class="callout-label">Honest read</span><p>Vault's answer here doesn't refute the critique's underlying point — it confirms it. Every one of these credential types still needs separate lifecycle management. What Vault offers is that its secrets engines already do that management today, independent of how mature the SPIFFE work is. This is a legitimate differentiator versus SPIRE (which has no secrets engine at all), but it should be framed as "Vault, the platform, already solves credential diversity" rather than "SPIFFE solves credential diversity."</p></div>
+</div>
+
+<div class="section bottom-line" id="bottom-line">
+  <div class="section-eyebrow">Summary</div>
+  <h2>Bottom line</h2>
+  <p>Vault SPIFFE has two genuinely strong, differentiated answers to the critique: hardware-rooted on-prem attestation via TPM, and a scoped, auditable model for AI agent access built on RAR and an Agent Registry. Neither is shipped today — TPM attestation targets Vault 2.1 (~October), and the agentic architecture is private preview with an unresolved dependency on a third-party authorization server. Both should be described as <strong>in-progress</strong>, not solved.</p>
+  <p>Vault's answer to the credential-type gap (SaaS, databases, cloud keys, SSH) is real but is a claim about Vault's general secrets management capability, not about SPIFFE itself — worth being precise about that distinction in any external framing, since it's easy to blur.</p>
+  <p>Several problems from the critique are not addressed anywhere in the current Vault SPIFFE corpus: the SaaS-authentication boundary itself, CI/CD ephemeral runner identity, Kerberos/on-prem AD integration, component maintenance risk, and the specific federation failure modes (JWKS key-count limits, trust bundle bugs) that the critique's Indeed Engineering example describes in detail.</p>
+  <p>Internally, Vault's own strategy docs don't agree on how far along this work is. The positioning and vision docs speak in the present tense about capabilities that the milestone and priority docs list as gaps targeting future quarters. The most reliable single source of truth in this corpus is the "grounding: what we actually have today" table in <code>vault-as-spiffe-provider-milestones.md</code> — any external claim should be checked against that table before it's made.</p>
+</div>
+
+<div class="section" id="open-questions">
+  <div class="section-eyebrow">Unresolved</div>
+  <h2>Open questions</h2>
+  <ul class="open-q">
+    <li>Should the credential-type-gap section distinguish "Vault the secrets manager" from "Vault SPIFFE" more sharply in external materials, given how easily the two get conflated in the source docs themselves?</li>
+    <li>Who owns resolving the PRD VLT-515 internal inconsistency (federation requirement written with acceptance criteria, then excluded from Milestone 1 scope)?</li>
+    <li>Is there a plan to address CI/CD ephemeral identity at all, or is that intentionally out of scope for Vault SPIFFE's roadmap?</li>
+    <li>Should the AI agent architecture's dependency on a third-party Authorization Server be resolved before any external claim describes agentic access as differentiated, given it's not fully within Vault's control?</li>
+  </ul>
+</div>
+
+<footer>
+  <p>Source: output/02.strategy/001.26.09.08.Vault-SPIFFE-Critique-Response.md</p>
+</footer>
+
+</body>
+</html>
