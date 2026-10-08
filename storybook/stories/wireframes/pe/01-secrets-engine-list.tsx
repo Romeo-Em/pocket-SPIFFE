@@ -2,7 +2,7 @@
  * 01-secrets-engine-list.tsx
  *
  * Secrets Engines index page.
- * States: Default (no SPIFFE mount) | WithSpiffe (SPIFFE mount present)
+ * States: Default (no SPIFFE mount) | WithSpiffe (JWT SPIFFE mount present)
  */
 import type { CSSProperties } from 'react';
 import { tok, existingEngines, existingEnginesWithSpiffe } from './_pe-fixtures';

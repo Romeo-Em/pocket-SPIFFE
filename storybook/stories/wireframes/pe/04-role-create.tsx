@@ -1,7 +1,7 @@
 /**
  * 04-role-create.tsx
  *
- * SPIFFE Secrets Engine — create role for X.509 minting.
+ * SPIFFE Secrets Engine — create role for JWT SVID minting.
  * States: Default | FilledValid | TemplateError | TtlError | Saving | Saved
  */
 import type { CSSProperties } from 'react';
@@ -110,20 +110,6 @@ const TEXTAREA = (state: 'default' | 'error' | 'valid'): CSSProperties => ({
   minHeight: 64,
 });
 
-const SELECT = (disabled?: boolean): CSSProperties => ({
-  display: 'block',
-  width: '100%',
-  padding: '7px 10px',
-  fontSize: 13,
-  border: `1px solid ${tok.borderSubtle}`,
-  borderRadius: 4,
-  background: disabled ? tok.layer02 : tok.bg,
-  color: disabled ? tok.textHelper : tok.textPrimary,
-  boxSizing: 'border-box',
-  appearance: 'none',
-  paddingRight: 28,
-});
-
 const BADGE_READONLY: CSSProperties = {
   display: 'inline-block',
   padding: '3px 8px',
@@ -133,12 +119,6 @@ const BADGE_READONLY: CSSProperties = {
   borderRadius: 3,
   background: tok.layer02,
   color: tok.textSecondary,
-};
-
-const TWO_COL: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: 16,
 };
 
 const ERROR_MSG: CSSProperties = {
@@ -238,235 +218,122 @@ function Stepper({ activeStep }: { activeStep: number }) {
 
 /* ── Exported wireframes ─────────────────────────────────────── */
 
-export function RoleCreateDefault() {
+type RoleMode = 'default' | 'valid' | 'template-error' | 'ttl-error' | 'disabled';
+
+function RoleFields({ mode }: { mode: RoleMode }) {
+  const disabled = mode === 'disabled';
+  const templateError = mode === 'template-error';
+  const ttlError = mode === 'ttl-error';
+
   return (
-    <div style={SHELL}>
-      <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Roles ▸ Create</div>
-      <Stepper activeStep={2} />
-      <div style={CONTENT}>
-        <div style={SECTION_TITLE}>Create role</div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Role name *</label>
-          <input readOnly style={INPUT('default')} value="" placeholder="e.g. k8s-worker" />
-          <div style={HELPER}>Identifies this role. Used in the mint endpoint path: spiffe/role/&lt;name&gt;/mintx509</div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SVID type</label>
-          <span style={BADGE_READONLY}>X.509</span>
-          <div style={HELPER}>Inherited from engine configuration.</div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SPIFFE ID template *</label>
-          <textarea readOnly style={TEXTAREA('default')} value="" placeholder={'spiffe://' + TRUST_DOMAIN + '/...'} rows={2} />
-          <div style={HELPER}>{'Use {{.entity.aliases.<auth_method>.metadata.<key>}} to interpolate workload metadata. Must produce a URI starting with spiffe://' + TRUST_DOMAIN + '/'}</div>
-        </div>
-        <div style={TWO_COL}>
-          <div style={FIELD_GROUP}>
-            <label style={LABEL}>TTL</label>
-            <input readOnly style={INPUT('default')} value="" placeholder="1h" />
-            <div style={HELPER}>Lifetime of issued SVIDs. Short-lived recommended (1h or less).</div>
-          </div>
-          <div style={FIELD_GROUP}>
-            <label style={{ ...LABEL, fontWeight: 400, color: tok.textSecondary }}>Max TTL</label>
-            <input readOnly style={INPUT('default')} value="" placeholder="24h" />
-            <div style={HELPER}>Maximum TTL a caller may request.</div>
-          </div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Key algorithm</label>
-          <select style={SELECT()}>
-            <option>EC (P-256)</option>
-            <option>EC (P-384)</option>
-            <option>RSA-2048</option>
-            <option>RSA-4096</option>
-          </select>
-        </div>
-        <div style={BTN_ROW}>
-          <button style={BTN('secondary')}>Cancel</button>
-          <button style={BTN('disabled')} disabled>Create role</button>
-        </div>
+    <>
+      <div style={FIELD_GROUP}>
+        <label style={LABEL}>Role name *</label>
+        <input readOnly style={INPUT(disabled ? 'disabled' : 'valid')} value={ROLE_NAME} />
+        <div style={HELPER}>Example role name. Used in the mint endpoint path: spiffe/role/{ROLE_NAME}/mintjwt.</div>
       </div>
-    </div>
+      <div style={FIELD_GROUP}>
+        <label style={LABEL}>SVID type</label>
+        <span style={BADGE_READONLY}>JWT SVID</span>
+        <div style={HELPER}>SPIFFE mounts currently issue JWT SVIDs.</div>
+      </div>
+      <div style={FIELD_GROUP}>
+        <label style={LABEL}>JWT claims template *</label>
+        <textarea
+          readOnly
+          style={{
+            ...TEXTAREA(templateError ? 'error' : mode === 'valid' ? 'valid' : 'default'),
+            ...(disabled ? { background: tok.layer02, color: tok.textHelper } : {}),
+          }}
+          value={templateError ? '{\n  "aud": "not-set-on-role"\n}' : roleDefaults.template}
+          rows={4}
+        />
+        {templateError ? (
+          <div style={ERROR_MSG}>⚠ Template must include a sub claim that expands to a valid SPIFFE ID in the configured trust domain.</div>
+        ) : (
+          <div style={HELPER}>The required sub claim becomes the SPIFFE ID. This example uses the Kubernetes auth alias service_account metadata.</div>
+        )}
+        {!templateError && <div style={HELPER}>Vault generates iss, aud, iat, and exp; it also adds the vault.entity.id provenance claim.</div>}
+        {mode === 'valid' && <div style={PREVIEW}>Preview: spiffe://{TRUST_DOMAIN}/k8s/payments-processor</div>}
+      </div>
+      <div style={FIELD_GROUP}>
+        <label style={LABEL}>TTL</label>
+        <input
+          readOnly
+          style={INPUT(ttlError ? 'error' : disabled ? 'disabled' : mode === 'valid' ? 'valid' : 'default')}
+          value={ttlError ? 'five minutes' : roleDefaults.ttl}
+        />
+        {ttlError ? (
+          <div style={ERROR_MSG}>⚠ Enter a Vault duration format, such as 5m or 300s.</div>
+        ) : (
+          <div style={HELPER}>Lifetime of minted JWT SVIDs. Default: 5m. Issued TTL is capped by the current signing key's remaining lifetime.</div>
+        )}
+      </div>
+      <div style={FIELD_GROUP}>
+        <label style={LABEL}>Include jti claim</label>
+        <div style={{ ...HELPER, marginTop: 0, color: tok.textPrimary }}>
+          <span aria-hidden="true">☐</span> Off (default)
+        </div>
+        <div style={HELPER}>When enabled, adds a unique token ID; this may affect JWT reusability.</div>
+      </div>
+      <div style={ALERT()}>
+        Audience is required when minting a JWT and is supplied per request. The mint endpoint accepts one audience value; it is not stored on this role.
+      </div>
+    </>
   );
 }
 
-export function RoleCreateFilledValid() {
-  return (
-    <div style={SHELL}>
-      <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Roles ▸ Create</div>
-      <Stepper activeStep={2} />
-      <div style={CONTENT}>
-        <div style={SECTION_TITLE}>Create role</div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Role name *</label>
-          <input readOnly style={INPUT('valid')} value={ROLE_NAME} />
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SVID type</label>
-          <span style={BADGE_READONLY}>X.509</span>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SPIFFE ID template *</label>
-          <textarea readOnly style={TEXTAREA('valid')} value={roleDefaults.spiffeIdTemplate} rows={2} />
-          <div style={PREVIEW}>Preview: spiffe://{TRUST_DOMAIN}/k8s/payments-processor</div>
-        </div>
-        <div style={TWO_COL}>
-          <div style={FIELD_GROUP}>
-            <label style={LABEL}>TTL</label>
-            <input readOnly style={INPUT('valid')} value={roleDefaults.ttl} />
-          </div>
-          <div style={FIELD_GROUP}>
-            <label style={{ ...LABEL, fontWeight: 400, color: tok.textSecondary }}>Max TTL</label>
-            <input readOnly style={INPUT('valid')} value={roleDefaults.maxTtl} />
-          </div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Key algorithm</label>
-          <select style={SELECT()}>
-            <option selected>EC (P-256)</option>
-            <option>EC (P-384)</option>
-            <option>RSA-2048</option>
-          </select>
-        </div>
-        <div style={BTN_ROW}>
-          <button style={BTN('secondary')}>Cancel</button>
-          <button style={BTN('primary')}>Create role</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function RoleCreateTemplateError() {
-  return (
-    <div style={SHELL}>
-      <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Roles ▸ Create</div>
-      <Stepper activeStep={2} />
-      <div style={CONTENT}>
-        <div style={SECTION_TITLE}>Create role</div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Role name *</label>
-          <input readOnly style={INPUT('valid')} value={ROLE_NAME} />
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SVID type</label>
-          <span style={BADGE_READONLY}>X.509</span>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SPIFFE ID template *</label>
-          <textarea readOnly style={TEXTAREA('error')} value="k8s/payments-processor" rows={2} />
-          <div style={ERROR_MSG}>⚠ Template must produce a valid SPIFFE ID starting with spiffe://</div>
-        </div>
-        <div style={TWO_COL}>
-          <div style={FIELD_GROUP}>
-            <label style={LABEL}>TTL</label>
-            <input readOnly style={INPUT('valid')} value={roleDefaults.ttl} />
-          </div>
-          <div style={FIELD_GROUP}>
-            <label style={{ ...LABEL, fontWeight: 400, color: tok.textSecondary }}>Max TTL</label>
-            <input readOnly style={INPUT('valid')} value={roleDefaults.maxTtl} />
-          </div>
-        </div>
-        <div style={BTN_ROW}>
-          <button style={BTN('secondary')}>Cancel</button>
-          <button style={BTN('disabled')} disabled>Create role</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function RoleCreateTtlError() {
-  return (
-    <div style={SHELL}>
-      <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Roles ▸ Create</div>
-      <Stepper activeStep={2} />
-      <div style={CONTENT}>
-        <div style={SECTION_TITLE}>Create role</div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Role name *</label>
-          <input readOnly style={INPUT('valid')} value={ROLE_NAME} />
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SVID type</label>
-          <span style={BADGE_READONLY}>X.509</span>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SPIFFE ID template *</label>
-          <textarea readOnly style={TEXTAREA('valid')} value={roleDefaults.spiffeIdTemplate} rows={2} />
-        </div>
-        <div style={TWO_COL}>
-          <div style={FIELD_GROUP}>
-            <label style={LABEL}>TTL</label>
-            <input readOnly style={INPUT('valid')} value="48h" />
-          </div>
-          <div style={FIELD_GROUP}>
-            <label style={{ ...LABEL, fontWeight: 400, color: tok.textSecondary }}>Max TTL</label>
-            <input readOnly style={INPUT('error')} value="24h" />
-            <div style={ERROR_MSG}>⚠ Max TTL must be equal to or greater than TTL.</div>
-          </div>
-        </div>
-        <div style={BTN_ROW}>
-          <button style={BTN('secondary')}>Cancel</button>
-          <button style={BTN('disabled')} disabled>Create role</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function RoleCreateSaving() {
-  return (
-    <div style={SHELL}>
-      <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Roles ▸ Create</div>
-      <Stepper activeStep={2} />
-      <div style={CONTENT}>
-        <div style={SECTION_TITLE}>Create role</div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Role name</label>
-          <input readOnly style={INPUT('disabled')} value={ROLE_NAME} />
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SPIFFE ID template</label>
-          <textarea readOnly style={{ ...TEXTAREA('valid'), background: tok.layer02, color: tok.textHelper }} value={roleDefaults.spiffeIdTemplate} rows={2} />
-        </div>
-        <div style={BTN_ROW}>
-          <button style={BTN('secondary')}>Cancel</button>
-          <button style={BTN('loading')} disabled>Creating... ◌</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function RoleCreateSaved() {
+function RoleCreatePage({ mode, saved = false }: { mode: RoleMode; saved?: boolean }) {
+  const disabled = mode === 'disabled' || saved;
+  const saving = mode === 'disabled' && !saved;
   return (
     <div style={SHELL}>
       <VaultTopBar />
       <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Roles ▸ {ROLE_NAME}</div>
       <Stepper activeStep={2} />
       <div style={CONTENT}>
-        <div style={ALERT()}>
-          ✓  Role <strong>{ROLE_NAME}</strong> created. Workloads using this role will receive X.509 SVIDs with a {roleDefaults.ttl} TTL.
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Role name</label>
-          <input readOnly style={INPUT('disabled')} value={ROLE_NAME} />
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SPIFFE ID template</label>
-          <textarea readOnly style={{ ...TEXTAREA('valid'), background: tok.layer02, color: tok.textHelper }} value={roleDefaults.spiffeIdTemplate} rows={2} />
-        </div>
+        <div style={SECTION_TITLE}>{saved ? 'JWT role created' : 'Create JWT role'}</div>
+        {saved && (
+          <div style={ALERT()}>
+            ✓ Role <strong>{ROLE_NAME}</strong> created. It mints JWT SVIDs with a {roleDefaults.ttl} TTL, capped by the current signing key's remaining lifetime.
+          </div>
+        )}
+        <RoleFields mode={disabled ? 'disabled' : mode} />
         <div style={BTN_ROW}>
-          <button style={BTN('secondary')}>Create another role</button>
-          <button style={BTN('primary')}>Next: Attach auth method →</button>
+          {saved && <button style={BTN('secondary')}>Create another role</button>}
+          {!saved && <button style={BTN('secondary')}>Cancel</button>}
+          <button
+            style={BTN(mode === 'template-error' || mode === 'ttl-error' ? 'disabled' : saving ? 'loading' : 'primary')}
+            disabled={mode === 'template-error' || mode === 'ttl-error' || saving}
+          >
+            {saved ? 'Next: Attach auth method →' : saving ? 'Creating... ◌' : 'Create role'}
+          </button>
         </div>
       </div>
     </div>
   );
+}
+
+export function RoleCreateDefault() {
+  return <RoleCreatePage mode="default" />;
+}
+
+export function RoleCreateFilledValid() {
+  return <RoleCreatePage mode="valid" />;
+}
+
+export function RoleCreateTemplateError() {
+  return <RoleCreatePage mode="template-error" />;
+}
+
+export function RoleCreateTtlError() {
+  return <RoleCreatePage mode="ttl-error" />;
+}
+
+export function RoleCreateSaving() {
+  return <RoleCreatePage mode="disabled" />;
+}
+
+export function RoleCreateSaved() {
+  return <RoleCreatePage mode="disabled" saved />;
 }

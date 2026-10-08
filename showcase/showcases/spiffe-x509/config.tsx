@@ -2493,6 +2493,12 @@ template {
         <div class="wf-nav-card-count">15 screens across the platform engineer, app developer, and security engineer journeys.</div>
         <a href="./user-journey.html" class="wf-nav-card-link">View wireframes &rarr;</a>
       </div>
+      <div class="wf-nav-card">
+        <div class="wf-nav-card-title">Vault SPIFFE Assessment</div>
+        <div class="wf-nav-card-tags">Positioning &middot; Analysis</div>
+        <div class="wf-nav-card-count">An honest assessment of Vault as a SPIFFE identity provider.</div>
+        <a href="./vault-spiffe-assessment.html" class="wf-nav-card-link">Read assessment &rarr;</a>
+      </div>
     </div>
   </div>
 </div>
@@ -2828,7 +2834,7 @@ export const allSections = [
     {
       id: 'pe-prototype',
       title: 'Platform Engineer — Clickable Prototype',
-      subtitle: 'Full happy path and error branches wired end-to-end. Click through the flow: enable engine, configure trust domain, create role, attach auth method, verify trust bundle.',
+      subtitle: 'Full happy path and error branches wired end-to-end. Click through the JWT flow: enable engine, configure signing, create JWT role, attach auth method, verify JWT endpoints.',
       stageNumber: 'Interactive',
       states: {
         'Full flow': PEPrototype,
@@ -2838,7 +2844,7 @@ export const allSections = [
           <h3>Scene coverage</h3>
           <ul>
             <li><strong>Happy path</strong>: engine list → enable → configure → role → auth → bundle → done (7 screens)</li>
-            <li><strong>Error branches</strong>: path conflict, domain error, issuer missing, template error, TTL error, bundle unreachable, bundle empty</li>
+            <li><strong>Error branches</strong>: path conflict, domain error, refresh-hint limit, missing sub claim, invalid SPIFFE ID, JWT endpoints unreachable, signing keys empty</li>
             <li><strong>Auto-advance</strong>: saving and checking states progress automatically after ~1.3 s</li>
           </ul>
         </div>
@@ -2893,8 +2899,8 @@ export const allSections = [
     },
     {
       id: 'pe-engine-config',
-      title: 'Configure trust domain and PKI issuer',
-      subtitle: 'Set the SPIFFE trust domain, select the intermediate CA, review X.509 defaults.',
+      title: 'Configure JWT engine',
+      subtitle: 'Set the trust domain and optional issuer URL; review signing and OIDC defaults.',
       stageNumber: 'PE — Step 3',
       states: {
         'Empty form':         EngineConfigDefault,
@@ -2908,15 +2914,15 @@ export const allSections = [
           <p>The trust domain field drives the SPIFFE ID namespace for every role created under this engine. Validated against RFC 3986 host format on blur.</p>
         </div>
         <div class="ann-block">
-          <h3>PKI issuer</h3>
-          <p>A dropdown populated from mounted PKI engines. Only intermediate CAs appear. If none are configured, a warning leads the engineer to set up PKI first.</p>
+          <h3>JWT defaults</h3>
+          <p>The optional issuer base URL defaults to the Vault API address. Signing key lifetime defaults to 24h, signing algorithm to RS256, and OIDC compatibility to off. The bundle refresh hint defaults to 1h and cannot exceed one tenth of the key lifetime.</p>
         </div>
       `,
     },
     {
       id: 'pe-role-create',
-      title: 'Create SVID role',
-      subtitle: 'Define the SPIFFE ID template, TTL, and key algorithm for a workload class.',
+      title: 'Create JWT role',
+      subtitle: 'Define the required sub claim, JWT lifetime, and optional jti claim for a workload class.',
       stageNumber: 'PE — Step 4',
       states: {
         'Empty form':         RoleCreateDefault,
@@ -2926,12 +2932,12 @@ export const allSections = [
       },
       annotation: `
         <div class="ann-block">
-          <h3>SPIFFE ID template</h3>
-          <p>Uses Vault Go template syntax. The field shows a live preview of the rendered SPIFFE ID as the operator types. Invalid template syntax triggers an inline error immediately.</p>
+          <h3>JWT claims template</h3>
+          <p>The required sub claim must resolve to a SPIFFE ID within the mount's trust domain. The example uses Kubernetes auth alias metadata. Vault generates iss, aud, iat, and exp, and adds the vault.entity.id provenance claim. Audience is a required single-value mint parameter, not a role setting.</p>
         </div>
         <div class="ann-block">
           <h3>TTL</h3>
-          <p>Default 1h; max 24h. Short TTLs are intentional - SVIDs are not secrets, rotation is automatic. The form accepts Go duration strings (1h, 30m) with validation on blur.</p>
+          <p>JWT lifetime defaults to 5m and is capped by the signing key's remaining lifetime. The optional jti claim is off by default; enabling it adds a unique token ID and may affect JWT reusability.</p>
         </div>
       `,
     },
@@ -2949,7 +2955,7 @@ export const allSections = [
       annotation: `
         <div class="ann-block">
           <h3>Policy generation</h3>
-          <p>Selecting a method generates a minimal HCL policy scoped to exactly the role's mint path. The operator can review it before attaching. No write access beyond the role's path.</p>
+          <p>Selecting a method generates a minimal HCL policy granting update on spiffe/role/k8s-worker/mintjwt. Apply this policy to the auth method role used by the workloads. Each mint request supplies one audience value expected by the receiving service.</p>
         </div>
         <div class="ann-block">
           <h3>Attached state</h3>
@@ -2959,8 +2965,8 @@ export const allSections = [
     },
     {
       id: 'pe-trust-bundle',
-      title: 'Verify trust bundle',
-      subtitle: 'Confirm the trust bundle endpoint is live, parseable, and returns the expected CA certs.',
+      title: 'Verify JWT endpoints',
+      subtitle: 'Review the JWT trust bundle, OIDC discovery, and public signing-key endpoints.',
       stageNumber: 'PE — Step 6',
       states: {
         'Checking':           TrustBundleVerifyChecking,
@@ -2969,12 +2975,12 @@ export const allSections = [
       },
       annotation: `
         <div class="ann-block">
-          <h3>Live check, not static message</h3>
-          <p>The final step performs a real HTTP fetch to the bundle URL and parses the response. A static "Done" message would hide misconfiguration that only manifests at runtime.</p>
+          <h3>Endpoint checks</h3>
+          <p>The wireframe simulates checks of /trust_bundle/web, /.well-known/openid-configuration, and /.well-known/keys. Checking, success, and unreachable states use fixture data; the showcase does not contact a live Vault server.</p>
         </div>
         <div class="ann-block">
           <h3>Handoff artifact</h3>
-          <p>The success state shows the bundle URL, key count, and CA fingerprint - the exact values an app developer or external federation partner needs to configure their trust store.</p>
+          <p>The success state provides the trust domain, role name, issuer base URL, verification endpoints, and a JWT mint command with the required audience for the application team.</p>
         </div>
       `,
     },

@@ -5,7 +5,14 @@
  * States: Empty | MethodSelected | PolicyPreview | Attached
  */
 import type { CSSProperties } from 'react';
-import { tok, existingAuthMethods, ROLE_NAME, POLICY_HCL, PE_STEPS } from './_pe-fixtures';
+import {
+  tok,
+  existingAuthMethods,
+  ROLE_NAME,
+  MINT_AUDIENCE,
+  POLICY_HCL,
+  PE_STEPS,
+} from './_pe-fixtures';
 
 /* ── Layout ──────────────────────────────────────────────────── */
 
@@ -300,7 +307,7 @@ export function AuthMethodMappingEmpty() {
         <div style={EMPTY_STATE}>
           <div style={EMPTY_ICON}>⊞</div>
           <div style={EMPTY_LABEL}>No auth method attached</div>
-          <div style={EMPTY_SUB}>Attach an auth method to allow workloads to authenticate and mint X.509 SVIDs via this role.</div>
+          <div style={EMPTY_SUB}>Attach an auth method to allow workloads to authenticate and mint JWT SVIDs via this role.</div>
           <button style={BTN_PRIMARY}>Attach auth method</button>
         </div>
       </div>
@@ -363,14 +370,17 @@ export function AuthMethodMappingPolicyPreview() {
           </div>
           <div style={HELPER}>
             Apply this policy to the <strong>kubernetes/</strong> role that your workloads authenticate with.
-            The policy grants update access to the X.509 SVID mint endpoint for role <strong>{ROLE_NAME}</strong>.
+            The policy grants update access to the JWT SVID mint endpoint for role <strong>{ROLE_NAME}</strong>.
           </div>
         </div>
         <div style={ALERT_NEUTRAL}>
           ℹ  After applying this policy, workloads authenticated via kubernetes/ can call{' '}
           <code style={{ fontFamily: tok.fontMono, fontSize: 11 }}>
-            vault write spiffe/role/{ROLE_NAME}/mintx509
+            vault write spiffe/role/{ROLE_NAME}/mintjwt audience="{MINT_AUDIENCE}"
           </code>
+        </div>
+        <div style={HELPER}>
+          The audience is a required, single-value mint parameter. Choose the value expected by the receiving service.
         </div>
         <div style={BTN_ROW}>
           <button style={BTN_SECONDARY}>Back</button>
@@ -390,7 +400,7 @@ export function AuthMethodMappingAttached() {
       <div style={CONTENT}>
         <div style={PAGE_TITLE}>Auth Method Mappings</div>
         <div style={ALERT_NEUTRAL}>
-          ✓  Auth method attached. Workloads authenticated via kubernetes/ can now mint X.509 SVIDs using role {ROLE_NAME}.
+          ✓  Auth method attached. Workloads authenticated via kubernetes/ can now mint JWT SVIDs using role {ROLE_NAME}.
         </div>
         <table style={TABLE}>
           <thead>
@@ -419,7 +429,7 @@ export function AuthMethodMappingAttached() {
         </div>
         <div style={BTN_ROW}>
           <button style={BTN_SECONDARY}>Edit</button>
-          <button style={BTN_PRIMARY}>Next: Verify trust bundle →</button>
+          <button style={BTN_PRIMARY}>Next: Verify JWT endpoints →</button>
         </div>
       </div>
     </div>

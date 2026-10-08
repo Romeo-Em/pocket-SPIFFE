@@ -1,7 +1,7 @@
 /**
  * pe-spiffe-prototype.stories.tsx
  *
- * Clickable prototype — Platform Engineer SPIFFE X.509 Setup
+ * Clickable prototype — Platform Engineer SPIFFE JWT Setup
  *
  * All 21 wireframe states stitched into a single navigable flow.
  * Buttons, engine cards, table rows, and breadcrumbs fire real
@@ -15,7 +15,7 @@
  *         → enable-conflict       (type existing path — toggle)
  *         → engine-config-default (click "Next: Configuration")
  *           → engine-config-error-domain  (toggle)
- *           → engine-config-error-issuer  (toggle)
+ *           → engine-config-error-issuer  (refresh-hint limit toggle)
  *           → engine-config-saving        (click "Save")
  *             → engine-config-saved
  *               → role-create-default
@@ -43,15 +43,17 @@ import {
   existingEngines,
   existingEnginesWithSpiffe,
   engineTypes,
-  pkiIssuers,
   existingAuthMethods,
   roleDefaults,
   TRUST_DOMAIN,
-  ENGINE_PATH,
-  BUNDLE_URL,
+  VAULT_API_ADDR,
+  TRUST_BUNDLE_URL,
+  OIDC_DISCOVERY_URL,
+  JWKS_URL,
   ROLE_NAME,
+  MINT_AUDIENCE,
   POLICY_HCL,
-  bundleVerifyResult,
+  jwtEndpointCheck,
   PE_STEPS,
 } from './pe/_pe-fixtures';
 
@@ -408,7 +410,7 @@ export function PEPrototype() {
               <button style={btn('primary')} onClick={() => go('enable-default')}>+ Enable new engine</button>
             </div>
             <div style={{ ...alert('neutral'), marginBottom: 16 }}>
-              ✓  SPIFFE Secrets Engine enabled at <code style={{ fontFamily: tok.fontMono, fontSize: 11 }}>spiffe/</code>. Trust bundle is live.
+              ✓  SPIFFE JWT Secrets Engine enabled at <code style={{ fontFamily: tok.fontMono, fontSize: 11 }}>spiffe/</code>.
             </div>
             <table style={S.table}>
               <thead><tr>
@@ -524,7 +526,7 @@ export function PEPrototype() {
           </div>
           <div style={{ ...S.fieldGroup, maxWidth: 480 }}>
             <label style={{ ...S.label as CSSProperties, fontWeight: 400, color: tok.textSecondary }}>Description (optional)</label>
-            <input readOnly style={input('valid')} value="SPIFFE workload identity for corp.example" />
+            <input readOnly style={input('valid')} value="JWT SPIFFE workload identity for corp.example" />
           </div>
           <div style={{ fontSize: 11, color: tok.textHelper, marginBottom: 12 }}>
             ↳ Try the path conflict: <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => go('enable-conflict')}>type an existing path</span>
@@ -574,21 +576,44 @@ export function PEPrototype() {
         <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Configuration']} go={go} targets={['engine-list', null, null]} />
         <Stepper activeStep={1} />
         <div style={S.content}>
-          <div style={S.sectionTitle}>Configure trust domain</div>
+          <div style={S.sectionTitle}>Configure JWT engine</div>
           <div style={S.fieldGroup as CSSProperties}>
             <label style={S.label as CSSProperties}>Trust domain *</label>
-            <input readOnly style={input()} value="" placeholder="e.g. corp.example" />
-            <div style={S.helper as CSSProperties}>Cannot be changed after the first SVID is issued. Click a filled state below.</div>
+            <input readOnly style={input('valid')} value={TRUST_DOMAIN} />
+            <div style={S.helper as CSSProperties}>Required. Example value: {TRUST_DOMAIN}. Cannot be changed after the first SVID is issued.</div>
+          </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>JWT issuer base URL (optional)</label>
+            <input readOnly style={input('valid')} value={VAULT_API_ADDR} />
+            <div style={S.helper as CSSProperties}>Defaults to the Vault API address. The mount path and issuer endpoint are appended.</div>
+          </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>Signing key lifetime</label>
+            <input readOnly style={input('valid')} value="24h" />
+            <div style={S.helper as CSSProperties}>Default: 24h. Vault generates a new signing key on this schedule.</div>
+          </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>JWT signing algorithm</label>
+            <select style={select()}><option selected>RS256 (default)</option><option>RS384</option><option>RS512</option><option>ES256</option><option>ES384</option><option>ES512</option></select>
+          </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>OIDC compatibility mode</label>
+            <div style={S.helper as CSSProperties}>☐ Off (default). When enabled, minting fails for SPIFFE IDs over 255 characters.</div>
+          </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>Bundle refresh hint</label>
+            <input readOnly style={input('valid')} value="1h" />
+            <div style={S.helper as CSSProperties}>Default: 1h. Cannot exceed one tenth of the 24h key lifetime (2h 24m).</div>
           </div>
           <div style={{ fontSize: 11, color: tok.textHelper, marginBottom: 20, display: 'flex', gap: 16 }}>
             <span>Jump to: </span>
             <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => go('config-error-domain')}>domain error</span>
-            <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => go('config-error-issuer')}>issuer error</span>
+            <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => go('config-error-issuer')}>refresh hint error</span>
             <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => go('config-saving')}>filled → saving</span>
           </div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('secondary')} onClick={() => go('enable-spiffe')}>← Back</button>
-            <button style={btn('disabled')} disabled>Save configuration</button>
+            <button style={btn('primary')} onClick={() => go('config-saving')}>Save configuration</button>
           </div>
         </div>
       </div>
@@ -604,15 +629,11 @@ export function PEPrototype() {
         <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Configuration']} go={go} targets={['engine-list', null, null]} />
         <Stepper activeStep={1} />
         <div style={S.content}>
-          <div style={S.sectionTitle}>Configure trust domain</div>
+          <div style={S.sectionTitle}>Configure JWT engine</div>
           <div style={S.fieldGroup as CSSProperties}>
             <label style={S.label as CSSProperties}>Trust domain *</label>
             <input readOnly style={input('error')} value="corp example" />
             <div style={S.errorMsg as CSSProperties}>⚠ Trust domain must be a valid hostname (lowercase, no spaces). Example: corp.example</div>
-          </div>
-          <div style={S.fieldGroup as CSSProperties}>
-            <label style={S.label as CSSProperties}>PKI issuer path *</label>
-            <select style={select()}><option>{pkiIssuers[0].label}</option></select>
           </div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('secondary')} onClick={() => go('config-default')}>← Back</button>
@@ -623,7 +644,7 @@ export function PEPrototype() {
     );
   }
 
-  /* ── 7. Engine Config — issuer missing ──────────────────────── */
+  /* ── 7. Engine Config — refresh hint exceeds allowed limit ──── */
   if (scene === 'config-error-issuer') {
     return (
       <div style={S.shell}>
@@ -632,17 +653,19 @@ export function PEPrototype() {
         <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Configuration']} go={go} targets={['engine-list', null, null]} />
         <Stepper activeStep={1} />
         <div style={S.content}>
-          <div style={S.sectionTitle}>Configure trust domain</div>
+          <div style={S.sectionTitle}>Configure JWT engine</div>
           <div style={S.fieldGroup as CSSProperties}>
             <label style={S.label as CSSProperties}>Trust domain *</label>
             <input readOnly style={input('valid')} value={TRUST_DOMAIN} />
           </div>
           <div style={S.fieldGroup as CSSProperties}>
-            <label style={S.label as CSSProperties}>PKI issuer path *</label>
-            <select style={{ ...select(), border: `1px solid ${tok.borderStrong}` }}>
-              <option value="">Select a PKI issuer...</option>
-            </select>
-            <div style={S.errorMsg as CSSProperties}>⚠ A PKI issuer path is required for X.509 SVID issuance.</div>
+            <label style={S.label as CSSProperties}>Signing key lifetime</label>
+            <input readOnly style={input('valid')} value="24h" />
+          </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>Bundle refresh hint</label>
+            <input readOnly style={input('error')} value="3h" />
+            <div style={S.errorMsg as CSSProperties}>⚠ Refresh hint cannot exceed one tenth of the key lifetime (maximum 2h 24m).</div>
           </div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('secondary')} onClick={() => go('config-default')}>← Back</button>
@@ -664,14 +687,22 @@ export function PEPrototype() {
         <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Configuration']} go={go} targets={['engine-list', null, null]} />
         <Stepper activeStep={1} />
         <div style={S.content}>
-          <div style={S.sectionTitle}>Configure trust domain</div>
+          <div style={S.sectionTitle}>Configure JWT engine</div>
           <div style={S.fieldGroup as CSSProperties}>
             <label style={S.label as CSSProperties}>Trust domain</label>
             <input readOnly style={input('disabled')} value={TRUST_DOMAIN} />
           </div>
           <div style={S.fieldGroup as CSSProperties}>
-            <label style={S.label as CSSProperties}>PKI issuer path</label>
-            <select style={select(true)} disabled><option>Default Issuer (pki/)</option></select>
+            <label style={S.label as CSSProperties}>JWT issuer base URL</label>
+            <input readOnly style={input('disabled')} value={VAULT_API_ADDR} />
+          </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>Signing key lifetime · Algorithm</label>
+            <input readOnly style={input('disabled')} value="24h · RS256" />
+          </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>OIDC compatibility · Bundle refresh hint</label>
+            <input readOnly style={input('disabled')} value="Off · 1h" />
           </div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('loading')} disabled>Saving... ◌</button>
@@ -690,15 +721,19 @@ export function PEPrototype() {
         <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Configuration']} go={go} targets={['engine-list', null, null]} />
         <Stepper activeStep={1} />
         <div style={S.content}>
-          <div style={S.sectionTitle}>Configure trust domain</div>
-          <div style={alert('success')}>✓  Trust domain configured. Trust bundle endpoint is now live at <code style={{ fontFamily: tok.fontMono, fontSize: 11 }}>https://vault.corp.example/v1/spiffe/bundle</code></div>
+          <div style={S.sectionTitle}>Configure JWT engine</div>
+          <div style={alert('success')}>✓ JWT signing configuration saved. OIDC discovery is available at <code style={{ fontFamily: tok.fontMono, fontSize: 11 }}>{OIDC_DISCOVERY_URL}</code></div>
           <div style={S.fieldGroup as CSSProperties}>
             <label style={S.label as CSSProperties}>Trust domain</label>
             <input readOnly style={input('disabled')} value={TRUST_DOMAIN} />
           </div>
           <div style={S.fieldGroup as CSSProperties}>
-            <label style={S.label as CSSProperties}>PKI issuer path</label>
-            <input readOnly style={input('disabled')} value="pki/issuer/default" />
+            <label style={S.label as CSSProperties}>Signing key lifetime · Algorithm</label>
+            <input readOnly style={input('disabled')} value="24h · RS256" />
+          </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>OIDC compatibility · Bundle refresh hint</label>
+            <input readOnly style={input('disabled')} value="Off · 1h" />
           </div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('secondary')}>Edit configuration</button>
@@ -718,21 +753,40 @@ export function PEPrototype() {
         <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Roles', 'Create']} go={go} targets={['engine-list', null, null, null]} />
         <Stepper activeStep={2} />
         <div style={S.content}>
-          <div style={S.sectionTitle}>Create role</div>
+          <div style={S.sectionTitle}>Create JWT role</div>
           <div style={S.fieldGroup as CSSProperties}>
             <label style={S.label as CSSProperties}>Role name *</label>
-            <input readOnly style={input()} value="" placeholder="e.g. k8s-worker" />
-            <div style={S.helper as CSSProperties}>Click a state below to continue.</div>
+            <input readOnly style={input('valid')} value={ROLE_NAME} />
+            <div style={S.helper as CSSProperties}>Example role name. Used in the mint endpoint path: spiffe/role/{ROLE_NAME}/mintjwt.</div>
           </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>SVID type</label>
+            <span style={badge(true)}>JWT SVID</span>
+          </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>JWT claims template *</label>
+            <textarea readOnly style={{ ...input(), minHeight: 80 }} value={roleDefaults.template} rows={4} />
+            <div style={S.helper as CSSProperties}>The required sub claim must expand to a valid SPIFFE ID in {TRUST_DOMAIN}. Vault generates iss, aud, iat, exp, and vault.entity.id.</div>
+          </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>TTL</label>
+            <input readOnly style={input('valid')} value={roleDefaults.ttl} />
+            <div style={S.helper as CSSProperties}>Default: 5m. Issued TTL is capped by the current signing key's remaining lifetime.</div>
+          </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>Include jti claim</label>
+            <div style={S.helper as CSSProperties}>☐ Off (default). Enabling adds a unique token ID and may affect reusability.</div>
+          </div>
+          <div style={alert('neutral')}>Audience is required at mint time, supplied per request, and limited to one value. It is not stored on the role.</div>
           <div style={{ fontSize: 11, color: tok.textHelper, marginBottom: 20, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <span>Jump to: </span>
-            <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => go('role-error-template')}>template error</span>
-            <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => go('role-error-ttl')}>TTL error</span>
+            <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => go('role-error-template')}>missing sub error</span>
+            <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => go('role-error-ttl')}>TTL format error</span>
             <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => go('role-saving')}>filled → saving</span>
           </div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('secondary')} onClick={() => go('config-saved')}>← Back</button>
-            <button style={btn('disabled')} disabled>Create role</button>
+            <button style={btn('primary')} onClick={() => go('role-saving')}>Create role</button>
           </div>
         </div>
       </div>
@@ -748,15 +802,15 @@ export function PEPrototype() {
         <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Roles', 'Create']} go={go} targets={['engine-list', null, null, null]} />
         <Stepper activeStep={2} />
         <div style={S.content}>
-          <div style={S.sectionTitle}>Create role</div>
+          <div style={S.sectionTitle}>Create JWT role</div>
           <div style={S.fieldGroup as CSSProperties}>
             <label style={S.label as CSSProperties}>Role name *</label>
             <input readOnly style={input('valid')} value={ROLE_NAME} />
           </div>
           <div style={S.fieldGroup as CSSProperties}>
-            <label style={S.label as CSSProperties}>SPIFFE ID template *</label>
-            <textarea readOnly style={{ display: 'block', width: '100%', padding: '7px 10px', fontSize: 12, fontFamily: tok.fontMono, border: `1px solid ${tok.borderStrong}`, borderRadius: 4, background: tok.bg, color: tok.textPrimary, boxSizing: 'border-box', minHeight: 56, resize: 'vertical' }} value="k8s/payments-processor" rows={2} />
-            <div style={S.errorMsg as CSSProperties}>⚠ Template must produce a valid SPIFFE ID starting with spiffe://</div>
+            <label style={S.label as CSSProperties}>JWT claims template *</label>
+            <textarea readOnly style={{ display: 'block', width: '100%', padding: '7px 10px', fontSize: 12, fontFamily: tok.fontMono, border: `1px solid ${tok.borderStrong}`, borderRadius: 4, background: tok.bg, color: tok.textPrimary, boxSizing: 'border-box', minHeight: 80, resize: 'vertical' }} value={'{\n  "aud": "not-set-on-role"\n}'} rows={4} />
+            <div style={S.errorMsg as CSSProperties}>⚠ Template must include a sub claim that expands to a valid SPIFFE ID in the configured trust domain.</div>
           </div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('secondary')} onClick={() => go('role-default')}>← Back</button>
@@ -776,21 +830,15 @@ export function PEPrototype() {
         <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Roles', 'Create']} go={go} targets={['engine-list', null, null, null]} />
         <Stepper activeStep={2} />
         <div style={S.content}>
-          <div style={S.sectionTitle}>Create role</div>
+          <div style={S.sectionTitle}>Create JWT role</div>
           <div style={S.fieldGroup as CSSProperties}>
             <label style={S.label as CSSProperties}>Role name *</label>
             <input readOnly style={input('valid')} value={ROLE_NAME} />
           </div>
-          <div style={S.twoCol as CSSProperties}>
-            <div style={S.fieldGroup as CSSProperties}>
-              <label style={S.label as CSSProperties}>TTL</label>
-              <input readOnly style={input('valid')} value="48h" />
-            </div>
-            <div style={S.fieldGroup as CSSProperties}>
-              <label style={{ ...S.label as CSSProperties, fontWeight: 400, color: tok.textSecondary }}>Max TTL</label>
-              <input readOnly style={input('error')} value="24h" />
-              <div style={S.errorMsg as CSSProperties}>⚠ Max TTL must be ≥ TTL.</div>
-            </div>
+          <div style={S.fieldGroup as CSSProperties}>
+            <label style={S.label as CSSProperties}>TTL</label>
+            <input readOnly style={input('error')} value="five minutes" />
+            <div style={S.errorMsg as CSSProperties}>⚠ Enter a Vault duration format, such as 5m or 300s.</div>
           </div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('secondary')} onClick={() => go('role-default')}>← Back</button>
@@ -811,14 +859,14 @@ export function PEPrototype() {
         <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Roles', 'Create']} go={go} targets={['engine-list', null, null, null]} />
         <Stepper activeStep={2} />
         <div style={S.content}>
-          <div style={S.sectionTitle}>Create role</div>
+          <div style={S.sectionTitle}>Create JWT role</div>
           <div style={S.fieldGroup as CSSProperties}>
             <label style={S.label as CSSProperties}>Role name</label>
             <input readOnly style={input('disabled')} value={ROLE_NAME} />
           </div>
           <div style={S.fieldGroup as CSSProperties}>
-            <label style={S.label as CSSProperties}>SPIFFE ID template</label>
-            <textarea readOnly style={{ display: 'block', width: '100%', padding: '7px 10px', fontSize: 12, fontFamily: tok.fontMono, border: `1px solid ${tok.borderSubtle}`, borderRadius: 4, background: tok.layer02, color: tok.textHelper, boxSizing: 'border-box', minHeight: 56 }} value={roleDefaults.spiffeIdTemplate} rows={2} />
+            <label style={S.label as CSSProperties}>JWT claims template</label>
+            <textarea readOnly style={{ display: 'block', width: '100%', padding: '7px 10px', fontSize: 12, fontFamily: tok.fontMono, border: `1px solid ${tok.borderSubtle}`, borderRadius: 4, background: tok.layer02, color: tok.textHelper, boxSizing: 'border-box', minHeight: 80 }} value={roleDefaults.template} rows={4} />
           </div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('loading')} disabled>Creating... ◌</button>
@@ -837,14 +885,14 @@ export function PEPrototype() {
         <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Roles', ROLE_NAME]} go={go} targets={['engine-list', null, null, null]} />
         <Stepper activeStep={2} />
         <div style={S.content}>
-          <div style={alert('success')}>✓  Role <strong>{ROLE_NAME}</strong> created. Workloads using this role will receive X.509 SVIDs with a {roleDefaults.ttl} TTL.</div>
+          <div style={alert('success')}>✓ Role <strong>{ROLE_NAME}</strong> created. It mints JWT SVIDs with a {roleDefaults.ttl} TTL, capped by the signing key's remaining lifetime.</div>
           <div style={S.fieldGroup as CSSProperties}>
             <label style={S.label as CSSProperties}>Role name</label>
             <input readOnly style={input('disabled')} value={ROLE_NAME} />
           </div>
           <div style={S.fieldGroup as CSSProperties}>
-            <label style={S.label as CSSProperties}>SPIFFE ID template</label>
-            <textarea readOnly style={{ display: 'block', width: '100%', padding: '7px 10px', fontSize: 12, fontFamily: tok.fontMono, border: `1px solid ${tok.borderSubtle}`, borderRadius: 4, background: tok.layer02, color: tok.textHelper, boxSizing: 'border-box', minHeight: 56 }} value={roleDefaults.spiffeIdTemplate} rows={2} />
+            <label style={S.label as CSSProperties}>JWT claims template</label>
+            <textarea readOnly style={{ display: 'block', width: '100%', padding: '7px 10px', fontSize: 12, fontFamily: tok.fontMono, border: `1px solid ${tok.borderSubtle}`, borderRadius: 4, background: tok.layer02, color: tok.textHelper, boxSizing: 'border-box', minHeight: 80 }} value={roleDefaults.template} rows={4} />
           </div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('secondary')}>Create another role</button>
@@ -869,7 +917,7 @@ export function PEPrototype() {
           <div style={S.emptyState as CSSProperties}>
             <div style={{ fontSize: 28, color: tok.borderSubtle }}>⊞</div>
             <div style={{ fontSize: 14, fontWeight: 500, color: tok.textSecondary }}>No auth method attached</div>
-            <div style={{ fontSize: 12, color: tok.textHelper, maxWidth: 320 }}>Attach an auth method to allow workloads to authenticate and mint X.509 SVIDs via this role.</div>
+            <div style={{ fontSize: 12, color: tok.textHelper, maxWidth: 320 }}>Attach an auth method to allow workloads to authenticate and mint JWT SVIDs via this role.</div>
             <button style={btn('primary')} onClick={() => go('auth-selected')}>Attach auth method</button>
           </div>
         </div>
@@ -926,9 +974,9 @@ export function PEPrototype() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
               <button style={{ fontSize: 11, fontFamily: tok.fontMono, border: `1px solid ${tok.borderSubtle}`, borderRadius: 3, padding: '2px 8px', background: tok.bg, color: tok.textHelper, cursor: 'pointer' }}>Copy</button>
             </div>
-            <div style={S.helper as CSSProperties}>Apply this policy to the <strong>kubernetes/</strong> role that your workloads authenticate with.</div>
+            <div style={S.helper as CSSProperties}>Apply this policy to the <strong>kubernetes/</strong> role that your workloads authenticate with. The policy grants access to JWT SVID minting.</div>
           </div>
-          <div style={alert('neutral')}>ℹ  After applying this policy, workloads authenticated via kubernetes/ can call <code style={{ fontFamily: tok.fontMono, fontSize: 11 }}>vault write spiffe/role/{ROLE_NAME}/mintx509</code></div>
+            <div style={alert('neutral')}>ℹ After applying this policy, workloads can call <code style={{ fontFamily: tok.fontMono, fontSize: 11 }}>vault write spiffe/role/{ROLE_NAME}/mintjwt audience="{MINT_AUDIENCE}"</code>. Audience is a required single-value mint parameter.</div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('secondary')} onClick={() => go('auth-selected')}>← Back</button>
             <button style={btn('primary')} onClick={() => go('auth-attached')}>Confirm mapping</button>
@@ -948,7 +996,7 @@ export function PEPrototype() {
         <Stepper activeStep={3} />
         <div style={S.content}>
           <div style={S.sectionTitle}>Auth Method Mappings</div>
-          <div style={alert('neutral')}>✓  Auth method attached. Workloads authenticated via kubernetes/ can now mint X.509 SVIDs using role {ROLE_NAME}.</div>
+          <div style={alert('neutral')}>✓ Auth method attached. Workloads authenticated via kubernetes/ can now mint JWT SVIDs using role {ROLE_NAME}.</div>
           <table style={S.table}>
             <thead><tr>
               <th style={S.th as CSSProperties}>Auth Method</th>
@@ -970,7 +1018,7 @@ export function PEPrototype() {
           <div style={{ marginTop: 12, fontSize: 12, color: tok.textHelper, cursor: 'pointer' }}>+ Attach another</div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('secondary')}>Edit</button>
-            <button style={btn('primary')} onClick={() => go('bundle-checking')}>Next: Verify trust bundle →</button>
+            <button style={btn('primary')} onClick={() => go('bundle-checking')}>Next: Verify JWT endpoints →</button>
           </div>
         </div>
       </div>
@@ -984,19 +1032,19 @@ export function PEPrototype() {
       <div style={S.shell}>
         <SceneHint scene={scene} />
         <TopBar go={go} />
-        <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Trust Bundle']} go={go} targets={['engine-list', null, null]} />
+        <Breadcrumb parts={['Secrets Engines', 'spiffe', 'JWT Endpoints']} go={go} targets={['engine-list', null, null]} />
         <Stepper activeStep={4} />
         <div style={S.content}>
-          <div style={S.sectionTitle}>Trust Bundle Verification</div>
-          <div style={{ ...S.pageDesc, maxWidth: 560 }}>Verifiers (Envoy, cloud IAM, other Vault clusters) will fetch this endpoint to validate SVIDs offline. No Vault token is required.</div>
+          <div style={S.sectionTitle}>JWT Endpoint Verification</div>
+          <div style={{ ...S.pageDesc, maxWidth: 560 }}>Check the unauthenticated trust bundle and OIDC discovery endpoints used by JWT SVID verifiers. No Vault token is required.</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 0', color: tok.textSecondary, fontSize: 13 }}>
             <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${tok.borderSubtle}`, borderTopColor: tok.textPrimary, flexShrink: 0, animation: 'spin 1s linear infinite' }} />
-            Checking trust bundle endpoint...
+            Checking trust bundle, OIDC discovery, and public signing keys...
           </div>
           <div style={{ fontSize: 11, color: tok.textHelper, display: 'flex', gap: 16 }}>
             <span>Or jump to: </span>
             <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => go('bundle-unreachable')}>unreachable</span>
-            <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => go('bundle-empty')}>empty bundle</span>
+            <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => go('bundle-empty')}>empty signing keys</span>
           </div>
         </div>
       </div>
@@ -1005,24 +1053,24 @@ export function PEPrototype() {
 
   /* ── 20. Bundle — success ────────────────────────────────────── */
   if (scene === 'bundle-success') {
-    const handoffText = `Trust domain:   ${TRUST_DOMAIN}\nRole name:      ${ROLE_NAME}\nBundle URL:     ${BUNDLE_URL}\nSVID type:      X.509\n\nMint endpoint:  vault write spiffe/role/${ROLE_NAME}/mintx509`;
+    const handoffText = `Trust domain:       ${TRUST_DOMAIN}\nRole name:          ${ROLE_NAME}\nIssuer base URL:    ${VAULT_API_ADDR}\nTrust bundle:       ${TRUST_BUNDLE_URL}\nOIDC discovery:     ${OIDC_DISCOVERY_URL}\nPublic keys (JWKS): ${JWKS_URL}\n\nMint JWT SVID:\nvault write spiffe/role/${ROLE_NAME}/mintjwt audience="${MINT_AUDIENCE}"`;
     return (
       <div style={S.shell}>
         <SceneHint scene={scene} />
         <TopBar go={go} />
-        <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Trust Bundle']} go={go} targets={['engine-list', null, null]} />
+        <Breadcrumb parts={['Secrets Engines', 'spiffe', 'JWT Endpoints']} go={go} targets={['engine-list', null, null]} />
         <Stepper activeStep={4} />
         <div style={S.content}>
-          <div style={S.sectionTitle}>Trust Bundle Verification</div>
-          <div style={{ ...S.pageDesc, maxWidth: 560 }}>The trust bundle is live and reachable. Share the details below with your application teams.</div>
+          <div style={S.sectionTitle}>JWT Endpoint Verification</div>
+          <div style={{ ...S.pageDesc, maxWidth: 560 }}>The JWT verification endpoints are live and reachable. Share the issuer and mint details with your application teams.</div>
           <div style={S.resultCard as CSSProperties}>
-            <div style={S.resultHeader as CSSProperties}><span>Trust bundle status</span><span style={badge()}>✓ Verified</span></div>
+            <div style={S.resultHeader as CSSProperties}><span>JWT endpoint status</span><span style={badge()}>✓ Verified</span></div>
             {([
-              ['Bundle URL', BUNDLE_URL],
-              ['Keys in bundle', String(bundleVerifyResult.keyCount)],
-              ['CA fingerprint', bundleVerifyResult.caFingerprint],
-              ['Replica sync', bundleVerifyResult.replicaStatus],
-              ['Last fetched', bundleVerifyResult.lastFetched],
+              ['Trust bundle', `${TRUST_BUNDLE_URL} · ${jwtEndpointCheck.status}`],
+              ['OIDC discovery', `${OIDC_DISCOVERY_URL} · ${jwtEndpointCheck.status}`],
+              ['Public keys (JWKS)', `${JWKS_URL} · ${jwtEndpointCheck.status}`],
+              ['Signing keys', String(jwtEndpointCheck.signingKeyCount)],
+              ['Last checked', jwtEndpointCheck.lastChecked],
             ] as [string, string][]).map(([label, value], i) => (
               <div key={label} style={{ ...S.resultRow as CSSProperties, borderBottom: i === 4 ? 'none' : `1px solid ${tok.borderSubtle}` }}>
                 <div style={S.resultLabel as CSSProperties}>{label}</div>
@@ -1052,11 +1100,11 @@ export function PEPrototype() {
       <div style={S.shell}>
         <SceneHint scene={scene} />
         <TopBar go={go} />
-        <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Trust Bundle']} go={go} targets={['engine-list', null, null]} />
+        <Breadcrumb parts={['Secrets Engines', 'spiffe', 'JWT Endpoints']} go={go} targets={['engine-list', null, null]} />
         <Stepper activeStep={4} />
         <div style={S.content}>
-          <div style={S.sectionTitle}>Trust Bundle Verification</div>
-          <div style={alert('error')}>⚠  Trust bundle endpoint is not reachable from this browser. Verify your Vault listener is accessible at <code style={{ fontFamily: tok.fontMono, fontSize: 11 }}>{BUNDLE_URL}</code></div>
+          <div style={S.sectionTitle}>JWT Endpoint Verification</div>
+          <div style={alert('error')}>⚠ JWT verification endpoints are not reachable from this browser. Verify your Vault listener is accessible at <code style={{ fontFamily: tok.fontMono, fontSize: 11 }}>{TRUST_BUNDLE_URL}</code></div>
           <div style={{ fontSize: 12, color: tok.textSecondary, marginBottom: 20, lineHeight: 1.6 }}>The engine is configured correctly. This check verifies reachability from the browser only. Verifiers running inside your network may still be able to reach the endpoint.</div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('secondary')} onClick={() => go('bundle-checking')}>← Back</button>
@@ -1073,12 +1121,12 @@ export function PEPrototype() {
       <div style={S.shell}>
         <SceneHint scene={scene} />
         <TopBar go={go} />
-        <Breadcrumb parts={['Secrets Engines', 'spiffe', 'Trust Bundle']} go={go} targets={['engine-list', null, null]} />
+        <Breadcrumb parts={['Secrets Engines', 'spiffe', 'JWT Endpoints']} go={go} targets={['engine-list', null, null]} />
         <Stepper activeStep={4} />
         <div style={S.content}>
-          <div style={S.sectionTitle}>Trust Bundle Verification</div>
-          <div style={alert('warning')}>⚠  Trust bundle returned 0 keys. Verify the PKI issuer path in engine configuration. The bundle must contain at least one CA certificate before SVIDs can be validated.</div>
-          <div style={{ fontSize: 12, color: tok.textHelper, marginBottom: 20 }}>Common cause: the PKI issuer path configured in the engine does not have a CA certificate yet, or the issuer was deleted after the engine was configured.</div>
+          <div style={S.sectionTitle}>JWT Endpoint Verification</div>
+          <div style={alert('warning')}>⚠ The public keys endpoint returned no signing keys. Verify the SPIFFE engine configuration and retry.</div>
+          <div style={{ fontSize: 12, color: tok.textHelper, marginBottom: 20 }}>Signing keys are published as a JSON Web Key Set. The SPIFFE trust bundle endpoint is separate and uses the https_web profile.</div>
           <div style={S.btnRow as CSSProperties}>
             <button style={btn('secondary')} onClick={() => go('config-saved')}>Go to configuration</button>
             <button style={btn('primary')} onClick={() => go('bundle-checking')}>Retry check</button>

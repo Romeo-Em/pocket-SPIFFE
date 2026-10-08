@@ -242,7 +242,7 @@ export function EnableEngineDefault() {
             Mount path <span style={{ color: tok.textHelper, fontWeight: 400 }}>*</span>
           </label>
           <input readOnly style={INPUT()} value="" placeholder="e.g. spiffe" />
-          <div style={HELPER}>The path where this engine will be mounted.</div>
+          <div style={HELPER}>The path where this engine will be mounted. Default: spiffe/.</div>
         </div>
         <div style={FIELD_GROUP}>
           <label style={LABEL_OPTIONAL}>Description (optional)</label>
@@ -288,7 +288,7 @@ export function EnableEngineSpiffeSelected() {
         </div>
         <div style={FIELD_GROUP}>
           <label style={LABEL_OPTIONAL}>Description (optional)</label>
-          <input readOnly style={INPUT()} value="SPIFFE workload identity for corp.example" />
+          <input readOnly style={INPUT()} value="SPIFFE JWT workload identity for corp.example" />
         </div>
         <div style={BTN_ROW}>
           <button style={BTN('secondary')}>Cancel</button>

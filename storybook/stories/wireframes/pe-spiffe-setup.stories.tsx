@@ -1,17 +1,17 @@
 /**
  * pe-spiffe-setup.stories.tsx
  *
- * Platform Engineer — SPIFFE X.509 Setup
+ * Platform Engineer — SPIFFE JWT Setup
  * PDR-001: Wireframe Plan — SPIFFE X.509 Setup: Platform Engineer
  *
  * 6 components, 21 stories total:
  *
  *   SecretsEngineList   (2)  — Default, WithSpiffe
  *   EnableEngine        (3)  — Default, SpiffeSelected, PathConflict
- *   EngineConfig        (6)  — Default, FilledValid, TrustDomainError, IssuerMissing, Saving, Saved
+ *   EngineConfig        (6)  — Default, FilledValid, TrustDomainError, RefreshHintError, Saving, Saved
  *   RoleCreate          (6)  — Default, FilledValid, TemplateError, TtlError, Saving, Saved
  *   AuthMethodMapping   (4)  — Empty, MethodSelected, PolicyPreview, Attached
- *   TrustBundleVerify   (4)  — Checking, Success, Unreachable, EmptyBundle
+ *   TrustBundleVerify   (4)  — Checking, Success, Unreachable, EmptySigningKeys
  */
 
 import type { Meta, StoryObj } from '@storybook/react';
@@ -33,7 +33,7 @@ import {
   EngineConfigDefault,
   EngineConfigFilledValid,
   EngineConfigTrustDomainError,
-  EngineConfigIssuerMissing,
+  EngineConfigRefreshHintError,
   EngineConfigSaving,
   EngineConfigSaved,
 } from './pe/03-engine-config';
@@ -58,7 +58,7 @@ import {
   TrustBundleVerifyChecking,
   TrustBundleVerifySuccess,
   TrustBundleVerifyUnreachable,
-  TrustBundleVerifyEmptyBundle,
+  TrustBundleVerifyEmptySigningKeys,
 } from './pe/06-trust-bundle-verify';
 
 /* ── Storybook meta ──────────────────────────────────────────── */
@@ -120,9 +120,9 @@ export const EngineConfig_TrustDomainError: Story = {
   render: () => <EngineConfigTrustDomainError />,
 };
 
-export const EngineConfig_IssuerMissing: Story = {
-  name: 'EngineConfig / IssuerMissing',
-  render: () => <EngineConfigIssuerMissing />,
+export const EngineConfig_RefreshHintError: Story = {
+  name: 'EngineConfig / RefreshHintError',
+  render: () => <EngineConfigRefreshHintError />,
 };
 
 export const EngineConfig_Saving: Story = {
@@ -206,7 +206,7 @@ export const TrustBundleVerify_Unreachable: Story = {
   render: () => <TrustBundleVerifyUnreachable />,
 };
 
-export const TrustBundleVerify_EmptyBundle: Story = {
-  name: 'TrustBundleVerify / EmptyBundle',
-  render: () => <TrustBundleVerifyEmptyBundle />,
+export const TrustBundleVerify_EmptySigningKeys: Story = {
+  name: 'TrustBundleVerify / EmptySigningKeys',
+  render: () => <TrustBundleVerifyEmptySigningKeys />,
 };

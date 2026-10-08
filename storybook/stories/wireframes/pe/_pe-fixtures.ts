@@ -2,10 +2,10 @@
  * _pe-fixtures.ts
  *
  * Shared types, token aliases, and mock data for the
- * Platform Engineer — SPIFFE X.509 Setup wireframe stories.
+ * Platform Engineer — SPIFFE JWT Setup wireframe stories.
  */
 
-/* ── Token alias (mirrors _incident-fixtures pattern) ────────── */
+/* ── Token alias ───────────────────────────────────────────── */
 
 export const tok = {
   bg:              'var(--z-bg)',
@@ -25,13 +25,12 @@ export const tok = {
 
 export const TRUST_DOMAIN = 'corp.example';
 export const ENGINE_PATH  = 'spiffe';
-export const BUNDLE_URL   = `https://vault.corp.example/v1/${ENGINE_PATH}/bundle`;
+export const VAULT_API_ADDR = 'https://vault.corp.example';
+export const TRUST_BUNDLE_URL = `${VAULT_API_ADDR}/v1/${ENGINE_PATH}/trust_bundle/web`;
+export const OIDC_DISCOVERY_URL = `${VAULT_API_ADDR}/v1/${ENGINE_PATH}/.well-known/openid-configuration`;
+export const JWKS_URL = `${VAULT_API_ADDR}/v1/${ENGINE_PATH}/.well-known/keys`;
 export const ROLE_NAME    = 'k8s-worker';
-
-export const pkiIssuers = [
-  { path: 'pki/issuer/default',  label: 'Default Issuer (pki/)' },
-  { path: 'pki-int/issuer/web',  label: 'Intermediate CA (pki-int/)' },
-];
+export const MINT_AUDIENCE = 'https://payments.corp.example';
 
 export const existingEngines = [
   { path: 'kv/',     type: 'KV v2',    description: 'Key/Value Secrets Engine v2' },
@@ -42,7 +41,7 @@ export const existingEngines = [
 
 export const existingEnginesWithSpiffe = [
   ...existingEngines,
-  { path: 'spiffe/', type: 'SPIFFE', description: 'SPIFFE Workload Identity' },
+  { path: 'spiffe/', type: 'SPIFFE', description: 'SPIFFE JWT Workload Identity' },
 ];
 
 export const existingAuthMethods = [
@@ -56,27 +55,27 @@ export const engineTypes = [
   { id: 'pki',     name: 'PKI',      desc: 'X.509 certificate authority' },
   { id: 'aws',     name: 'AWS',      desc: 'Dynamic AWS credentials' },
   { id: 'ssh',     name: 'SSH',      desc: 'SSH certificate signing' },
-  { id: 'spiffe',  name: 'SPIFFE',   desc: 'Workload identity SVIDs' },
+  { id: 'spiffe',  name: 'SPIFFE',   desc: 'Mint JWT workload identity SVIDs' },
   { id: 'transit', name: 'Transit',  desc: 'Encryption / decryption' },
 ];
 
 export const roleDefaults = {
-  ttl:    '1h',
-  maxTtl: '24h',
-  keyAlgorithm: 'EC (P-256)',
-  spiffeIdTemplate: 'spiffe://corp.example/k8s/{{.entity.aliases.kubernetes.metadata.service_account}}',
+  ttl: '5m',
+  template: `{
+  "sub": "spiffe://${TRUST_DOMAIN}/k8s/{{identity.entity.aliases.$MOUNT_ACCESSOR.metadata.service_account}}"
+}`,
+  useJtiClaim: false,
 };
 
-export const bundleVerifyResult = {
-  keyCount:      2,
-  lastFetched:   '2026-07-25T10:42:00Z',
-  replicaStatus: 'Synced',
-  caFingerprint: 'SHA256:3a:bc:4d:9e:...',
+export const jwtEndpointCheck = {
+  status: 'HTTP 200',
+  signingKeyCount: 2,
+  lastChecked: '2026-07-25T10:42:00Z',
 };
 
 /* ── HCL policy snippet ──────────────────────────────────────── */
 
-export const POLICY_HCL = `path "spiffe/role/k8s-worker/mintx509" {
+export const POLICY_HCL = `path "spiffe/role/k8s-worker/mintjwt" {
   capabilities = ["update"]
 }`;
 
@@ -86,8 +85,8 @@ export type PEStep = 0 | 1 | 2 | 3 | 4;
 
 export const PE_STEPS = [
   'Enable engine',
-  'Configure trust domain',
-  'Create role',
+  'Configure JWT engine',
+  'Create JWT role',
   'Attach auth method',
-  'Verify trust bundle',
+  'Verify JWT endpoints',
 ] as const;

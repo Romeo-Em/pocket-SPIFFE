@@ -2,10 +2,16 @@
  * 03-engine-config.tsx
  *
  * SPIFFE Secrets Engine — trust domain + PKI configuration.
- * States: Default | FilledValid | TrustDomainError | IssuerMissing | Saving | Saved
+ * States: Default | FilledValid | TrustDomainError | RefreshHintError | Saving | Saved
  */
 import type { CSSProperties } from 'react';
-import { tok, pkiIssuers, TRUST_DOMAIN, PE_STEPS } from './_pe-fixtures';
+import {
+  tok,
+  TRUST_DOMAIN,
+  VAULT_API_ADDR,
+  OIDC_DISCOVERY_URL,
+  PE_STEPS,
+} from './_pe-fixtures';
 
 /* ── Layout ──────────────────────────────────────────────────── */
 
@@ -124,23 +130,6 @@ const ERROR_MSG: CSSProperties = {
   gap: 4,
 };
 
-const RADIO_GROUP: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 8,
-  marginTop: 4,
-};
-
-const RADIO_ITEM = (selected: boolean): CSSProperties => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  fontSize: 13,
-  color: selected ? tok.textPrimary : tok.textSecondary,
-  fontWeight: selected ? 500 : 400,
-  cursor: 'pointer',
-});
-
 const ALERT = (type: 'success' | 'error' | 'neutral'): CSSProperties => ({
   padding: '10px 14px',
   border: `1px solid ${tok.borderSubtle}`,
@@ -218,237 +207,129 @@ function Stepper({ activeStep }: { activeStep: number }) {
 
 /* ── Exported wireframes ─────────────────────────────────────── */
 
-export function EngineConfigDefault() {
+type EngineConfigMode = 'default' | 'valid' | 'domain-error' | 'refresh-hint-error' | 'disabled';
+
+function EngineConfigFields({ mode }: { mode: EngineConfigMode }) {
+  const isDisabled = mode === 'disabled';
+  const isCustom = mode === 'valid';
+  const issuerUrl = isCustom ? 'https://identity.corp.example' : VAULT_API_ADDR;
+  const keyLifetime = isCustom ? '48h' : '24h';
+  const algorithm = isCustom ? 'ES256' : 'RS256';
+  const compatibilityMode = isCustom;
+  const refreshHint = isCustom ? '2h' : mode === 'refresh-hint-error' ? '3h' : '1h';
+
+  return (
+    <>
+      <div style={FIELD_GROUP}>
+        <label style={LABEL}>Trust domain *</label>
+        <input
+          readOnly
+          style={INPUT(mode === 'domain-error' ? 'error' : isDisabled ? 'disabled' : mode === 'valid' ? 'valid' : 'default')}
+          value={mode === 'domain-error' ? 'corp example' : TRUST_DOMAIN}
+        />
+        {mode === 'domain-error' ? (
+          <div style={ERROR_MSG}>⚠ Trust domain must be a valid hostname (lowercase, no spaces). Example: corp.example</div>
+        ) : (
+          <div style={HELPER}>Required. Example value: {TRUST_DOMAIN}. Cannot be changed after the first SVID is issued.</div>
+        )}
+      </div>
+      <div style={FIELD_GROUP}>
+        <label style={LABEL}>JWT issuer base URL (optional)</label>
+        <input readOnly style={INPUT(isDisabled ? 'disabled' : mode === 'valid' ? 'valid' : 'default')} value={issuerUrl} />
+        <div style={HELPER}>Optional. Defaults to Vault API address {VAULT_API_ADDR}. The mount path and issuer endpoint are appended.</div>
+      </div>
+      <div style={FIELD_GROUP}>
+        <label style={LABEL}>Signing key lifetime</label>
+        <input readOnly style={INPUT(isDisabled ? 'disabled' : mode === 'valid' ? 'valid' : 'default')} value={keyLifetime} />
+        <div style={HELPER}>How often Vault generates a new signing key. Default: 24h.</div>
+      </div>
+      <div style={FIELD_GROUP}>
+        <label style={LABEL}>JWT signing algorithm</label>
+        <select style={SELECT(isDisabled)} disabled={isDisabled}>
+          {[algorithm, 'RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512']
+            .filter((value, index, values) => values.indexOf(value) === index)
+            .map(value => <option key={value} selected={value === algorithm}>{value}{value === 'RS256' ? ' (default)' : ''}</option>)}
+        </select>
+        <div style={HELPER}>Algorithm used for JWT SVIDs. Default: RS256.</div>
+      </div>
+      <div style={FIELD_GROUP}>
+        <label style={LABEL}>OIDC compatibility mode</label>
+        <div style={{ ...HELPER, marginTop: 0, color: tok.textPrimary }}>
+          <span aria-hidden="true">{compatibilityMode ? '☑' : '☐'}</span> {compatibilityMode ? 'On' : 'Off (default)'}
+        </div>
+        <div style={HELPER}>When enabled, minting fails if the SPIFFE ID exceeds the 255-character OIDC subject limit.</div>
+      </div>
+      <div style={FIELD_GROUP}>
+        <label style={LABEL}>Bundle refresh hint</label>
+        <input
+          readOnly
+          style={INPUT(mode === 'refresh-hint-error' ? 'error' : isDisabled ? 'disabled' : mode === 'valid' ? 'valid' : 'default')}
+          value={refreshHint}
+        />
+        {mode === 'refresh-hint-error' ? (
+          <div style={ERROR_MSG}>⚠ Refresh hint cannot exceed one tenth of the 24h key lifetime (maximum 2h 24m).</div>
+        ) : (
+          <div style={HELPER}>Default: 1h. Must not exceed one tenth of the signing key lifetime.</div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function EngineConfigPage({ mode, saved = false }: { mode: EngineConfigMode; saved?: boolean }) {
+  const disabled = mode === 'disabled' || saved;
   return (
     <div style={SHELL}>
       <VaultTopBar />
       <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Configuration</div>
       <Stepper activeStep={1} />
       <div style={CONTENT}>
-        <div style={SECTION_TITLE}>Configure trust domain</div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Trust domain *</label>
-          <input readOnly style={INPUT('default')} value="" placeholder="e.g. corp.example" />
-          <div style={HELPER}>The SPIFFE trust domain for all SVIDs issued from this mount. Cannot be changed after the first SVID is issued.</div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SVID type *</label>
-          <div style={RADIO_GROUP}>
-            <label style={RADIO_ITEM(true)}><span>●</span> X.509 SVIDs</label>
-            <label style={RADIO_ITEM(false)}><span>○</span> JWT SVIDs</label>
-            <label style={RADIO_ITEM(false)}><span>○</span> Both</label>
+        <div style={SECTION_TITLE}>Configure JWT engine</div>
+        {saved && (
+          <div style={ALERT('success')}>
+            ✓ JWT signing configuration saved. OIDC discovery is available at{' '}
+            <code style={{ fontFamily: tok.fontMono, fontSize: 11 }}>{OIDC_DISCOVERY_URL}</code>
           </div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>PKI issuer path *</label>
-          <select style={SELECT()} disabled>
-            <option>Select a PKI issuer...</option>
-          </select>
-          <div style={HELPER}>The Vault PKI engine issuer that will sign X.509 SVIDs. Required when issuing X.509 SVIDs.</div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={{ ...LABEL, fontWeight: 400, color: tok.textSecondary }}>Bundle refresh hint (seconds)</label>
-          <input readOnly style={INPUT('default')} value="3600" />
-          <div style={HELPER}>How often verifiers should re-fetch the trust bundle. Default: 3600.</div>
-        </div>
+        )}
+        {mode === 'valid' && <div style={ALERT('neutral')}>Custom JWT settings are valid. The default values are shown on the initial configuration form.</div>}
+        <EngineConfigFields mode={disabled ? 'disabled' : mode} />
         <div style={BTN_ROW}>
           <button style={BTN('secondary')}>Cancel</button>
-          <button style={BTN('disabled')} disabled>Save configuration</button>
+          {saved ? (
+            <button style={BTN('primary')}>Next: Create a role →</button>
+          ) : mode === 'disabled' ? (
+            <button style={BTN('loading')} disabled>Saving... ◌</button>
+          ) : (
+            <button style={BTN(mode === 'domain-error' || mode === 'refresh-hint-error' ? 'disabled' : 'primary')} disabled={mode === 'domain-error' || mode === 'refresh-hint-error'}>
+              Save configuration
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
+}
+
+export function EngineConfigDefault() {
+  return <EngineConfigPage mode="default" />;
 }
 
 export function EngineConfigFilledValid() {
-  return (
-    <div style={SHELL}>
-      <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Configuration</div>
-      <Stepper activeStep={1} />
-      <div style={CONTENT}>
-        <div style={SECTION_TITLE}>Configure trust domain</div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Trust domain *</label>
-          <input readOnly style={INPUT('valid')} value={TRUST_DOMAIN} />
-          <div style={HELPER}>Cannot be changed after the first SVID is issued.</div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SVID type *</label>
-          <div style={RADIO_GROUP}>
-            <label style={RADIO_ITEM(true)}><span>●</span> X.509 SVIDs</label>
-            <label style={RADIO_ITEM(false)}><span>○</span> JWT SVIDs</label>
-            <label style={RADIO_ITEM(false)}><span>○</span> Both</label>
-          </div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>PKI issuer path *</label>
-          <select style={SELECT()}>
-            {pkiIssuers.map(p => (
-              <option key={p.path} selected={p.path === 'pki/issuer/default'}>{p.label}</option>
-            ))}
-          </select>
-          <div style={HELPER}>Signs all X.509 SVIDs issued from this mount.</div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={{ ...LABEL, fontWeight: 400, color: tok.textSecondary }}>Bundle refresh hint (seconds)</label>
-          <input readOnly style={INPUT('valid')} value="3600" />
-        </div>
-        <div style={BTN_ROW}>
-          <button style={BTN('secondary')}>Cancel</button>
-          <button style={BTN('primary')}>Save configuration</button>
-        </div>
-      </div>
-    </div>
-  );
+  return <EngineConfigPage mode="valid" />;
 }
 
 export function EngineConfigTrustDomainError() {
-  return (
-    <div style={SHELL}>
-      <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Configuration</div>
-      <Stepper activeStep={1} />
-      <div style={CONTENT}>
-        <div style={SECTION_TITLE}>Configure trust domain</div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Trust domain *</label>
-          <input readOnly style={INPUT('error')} value="corp example" />
-          <div style={ERROR_MSG}>⚠ Trust domain must be a valid hostname (lowercase, no spaces). Example: corp.example</div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SVID type *</label>
-          <div style={RADIO_GROUP}>
-            <label style={RADIO_ITEM(true)}><span>●</span> X.509 SVIDs</label>
-            <label style={RADIO_ITEM(false)}><span>○</span> JWT SVIDs</label>
-            <label style={RADIO_ITEM(false)}><span>○</span> Both</label>
-          </div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>PKI issuer path *</label>
-          <select style={SELECT()}>
-            {pkiIssuers.map(p => (
-              <option key={p.path}>{p.label}</option>
-            ))}
-          </select>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={{ ...LABEL, fontWeight: 400, color: tok.textSecondary }}>Bundle refresh hint (seconds)</label>
-          <input readOnly style={INPUT('default')} value="3600" />
-        </div>
-        <div style={BTN_ROW}>
-          <button style={BTN('secondary')}>Cancel</button>
-          <button style={BTN('disabled')} disabled>Save configuration</button>
-        </div>
-      </div>
-    </div>
-  );
+  return <EngineConfigPage mode="domain-error" />;
 }
 
-export function EngineConfigIssuerMissing() {
-  return (
-    <div style={SHELL}>
-      <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Configuration</div>
-      <Stepper activeStep={1} />
-      <div style={CONTENT}>
-        <div style={SECTION_TITLE}>Configure trust domain</div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Trust domain *</label>
-          <input readOnly style={INPUT('valid')} value={TRUST_DOMAIN} />
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SVID type *</label>
-          <div style={RADIO_GROUP}>
-            <label style={RADIO_ITEM(true)}><span>●</span> X.509 SVIDs</label>
-            <label style={RADIO_ITEM(false)}><span>○</span> JWT SVIDs</label>
-            <label style={RADIO_ITEM(false)}><span>○</span> Both</label>
-          </div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>PKI issuer path *</label>
-          <select style={{ ...SELECT(), border: `1px solid ${tok.borderStrong}`, outline: `1px solid ${tok.borderStrong}` }}>
-            <option value="">Select a PKI issuer...</option>
-          </select>
-          <div style={ERROR_MSG}>⚠ A PKI issuer path is required for X.509 SVID issuance.</div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={{ ...LABEL, fontWeight: 400, color: tok.textSecondary }}>Bundle refresh hint (seconds)</label>
-          <input readOnly style={INPUT('default')} value="3600" />
-        </div>
-        <div style={BTN_ROW}>
-          <button style={BTN('secondary')}>Cancel</button>
-          <button style={BTN('disabled')} disabled>Save configuration</button>
-        </div>
-      </div>
-    </div>
-  );
+export function EngineConfigRefreshHintError() {
+  return <EngineConfigPage mode="refresh-hint-error" />;
 }
 
 export function EngineConfigSaving() {
-  return (
-    <div style={SHELL}>
-      <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Configuration</div>
-      <Stepper activeStep={1} />
-      <div style={CONTENT}>
-        <div style={SECTION_TITLE}>Configure trust domain</div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Trust domain *</label>
-          <input readOnly style={INPUT('disabled')} value={TRUST_DOMAIN} />
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SVID type *</label>
-          <div style={RADIO_GROUP}>
-            <label style={{ ...RADIO_ITEM(true), opacity: 0.5 }}><span>●</span> X.509 SVIDs</label>
-          </div>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>PKI issuer path *</label>
-          <select style={SELECT(true)} disabled>
-            <option>Default Issuer (pki/)</option>
-          </select>
-        </div>
-        <div style={BTN_ROW}>
-          <button style={BTN('secondary')}>Cancel</button>
-          <button style={BTN('loading')} disabled>Saving... ◌</button>
-        </div>
-      </div>
-    </div>
-  );
+  return <EngineConfigPage mode="disabled" />;
 }
 
 export function EngineConfigSaved() {
-  return (
-    <div style={SHELL}>
-      <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Configuration</div>
-      <Stepper activeStep={1} />
-      <div style={CONTENT}>
-        <div style={SECTION_TITLE}>Configure trust domain</div>
-        <div style={ALERT('success')}>
-          ✓  Trust domain configured. Trust bundle endpoint is now live at{' '}
-          <code style={{ fontFamily: tok.fontMono, fontSize: 11 }}>
-            https://vault.corp.example/v1/spiffe/bundle
-          </code>
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>Trust domain</label>
-          <input readOnly style={INPUT('disabled')} value={TRUST_DOMAIN} />
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>SVID type</label>
-          <input readOnly style={INPUT('disabled')} value="X.509 SVIDs" />
-        </div>
-        <div style={FIELD_GROUP}>
-          <label style={LABEL}>PKI issuer path</label>
-          <input readOnly style={INPUT('disabled')} value="pki/issuer/default" />
-        </div>
-        <div style={BTN_ROW}>
-          <button style={BTN('secondary')}>Edit configuration</button>
-          <button style={BTN('primary')}>Next: Create a role →</button>
-        </div>
-      </div>
-    </div>
-  );
+  return <EngineConfigPage mode="disabled" saved />;
 }

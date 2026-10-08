@@ -2,10 +2,21 @@
  * 06-trust-bundle-verify.tsx
  *
  * Trust bundle verification — final step of PE setup.
- * States: Checking | Success | Unreachable | EmptyBundle
+ * States: Checking | Success | Unreachable | EmptySigningKeys
  */
 import type { CSSProperties } from 'react';
-import { tok, BUNDLE_URL, TRUST_DOMAIN, ROLE_NAME, bundleVerifyResult, PE_STEPS } from './_pe-fixtures';
+import {
+  tok,
+  TRUST_BUNDLE_URL,
+  OIDC_DISCOVERY_URL,
+  JWKS_URL,
+  VAULT_API_ADDR,
+  TRUST_DOMAIN,
+  ROLE_NAME,
+  MINT_AUDIENCE,
+  jwtEndpointCheck,
+  PE_STEPS,
+} from './_pe-fixtures';
 
 /* ── Layout ──────────────────────────────────────────────────── */
 
@@ -128,6 +139,7 @@ const RESULT_VALUE: CSSProperties = {
   fontSize: 12,
   fontFamily: tok.fontMono,
   color: tok.textPrimary,
+  overflowWrap: 'anywhere',
 };
 
 const BADGE_SYNCED: CSSProperties = {
@@ -258,12 +270,15 @@ function Stepper({ activeStep }: { activeStep: number }) {
   );
 }
 
-const HANDOFF_TEXT = `Trust domain:   ${TRUST_DOMAIN}
-Role name:      ${ROLE_NAME}
-Bundle URL:     ${BUNDLE_URL}
-SVID type:      X.509
+const HANDOFF_TEXT = `Trust domain:       ${TRUST_DOMAIN}
+Role name:          ${ROLE_NAME}
+Issuer base URL:    ${VAULT_API_ADDR}
+Trust bundle:       ${TRUST_BUNDLE_URL}
+OIDC discovery:     ${OIDC_DISCOVERY_URL}
+Public keys (JWKS): ${JWKS_URL}
 
-Mint endpoint:  vault write spiffe/role/${ROLE_NAME}/mintx509`;
+Mint JWT SVID:
+vault write spiffe/role/${ROLE_NAME}/mintjwt audience="${MINT_AUDIENCE}"`;
 
 /* ── Exported wireframes ─────────────────────────────────────── */
 
@@ -271,17 +286,17 @@ export function TrustBundleVerifyChecking() {
   return (
     <div style={SHELL}>
       <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Trust Bundle</div>
+      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ JWT Endpoints</div>
       <Stepper activeStep={4} />
       <div style={CONTENT}>
-        <div style={PAGE_TITLE}>Trust Bundle Verification</div>
+        <div style={PAGE_TITLE}>JWT Endpoint Verification</div>
         <div style={PAGE_DESC}>
-          Verifiers (Envoy, cloud IAM, other Vault clusters) will fetch this endpoint to validate SVIDs offline.
+          Check the unauthenticated SPIFFE trust bundle and OIDC discovery endpoints used by JWT SVID verifiers.
           No Vault token is required.
         </div>
         <div style={CHECKING_STATE}>
           <div style={SPINNER} />
-          Checking trust bundle endpoint...
+          Checking trust bundle, OIDC discovery, and public signing keys...
         </div>
       </div>
     </div>
@@ -292,38 +307,38 @@ export function TrustBundleVerifySuccess() {
   return (
     <div style={SHELL}>
       <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Trust Bundle</div>
+      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ JWT Endpoints</div>
       <Stepper activeStep={4} />
       <div style={CONTENT}>
-        <div style={PAGE_TITLE}>Trust Bundle Verification</div>
+        <div style={PAGE_TITLE}>JWT Endpoint Verification</div>
         <div style={PAGE_DESC}>
-          The trust bundle is live and reachable. Share the details below with your application teams.
+          The JWT verification endpoints are live and reachable. Share the issuer and mint details with your application teams.
         </div>
 
         <div style={RESULT_CARD}>
           <div style={RESULT_HEADER}>
-            <span>Trust bundle status</span>
+            <span>JWT endpoint status</span>
             <span style={BADGE_SYNCED}>✓ Verified</span>
           </div>
           <div style={RESULT_ROW}>
-            <div style={RESULT_LABEL}>Bundle URL</div>
-            <div style={RESULT_VALUE}>{BUNDLE_URL}</div>
+            <div style={RESULT_LABEL}>Trust bundle</div>
+            <div style={RESULT_VALUE}>{TRUST_BUNDLE_URL} · {jwtEndpointCheck.status}</div>
           </div>
           <div style={RESULT_ROW}>
-            <div style={RESULT_LABEL}>Keys in bundle</div>
-            <div style={RESULT_VALUE}>{bundleVerifyResult.keyCount}</div>
+            <div style={RESULT_LABEL}>OIDC discovery</div>
+            <div style={RESULT_VALUE}>{OIDC_DISCOVERY_URL} · {jwtEndpointCheck.status}</div>
           </div>
           <div style={RESULT_ROW}>
-            <div style={RESULT_LABEL}>CA fingerprint</div>
-            <div style={RESULT_VALUE}>{bundleVerifyResult.caFingerprint}</div>
+            <div style={RESULT_LABEL}>Public keys (JWKS)</div>
+            <div style={RESULT_VALUE}>{JWKS_URL} · {jwtEndpointCheck.status}</div>
           </div>
           <div style={RESULT_ROW}>
-            <div style={RESULT_LABEL}>Replica sync</div>
-            <div style={RESULT_VALUE}><span style={BADGE_SYNCED}>{bundleVerifyResult.replicaStatus}</span></div>
+            <div style={RESULT_LABEL}>Signing keys</div>
+            <div style={RESULT_VALUE}>{jwtEndpointCheck.signingKeyCount}</div>
           </div>
           <div style={{ ...RESULT_ROW, borderBottom: 'none' }}>
-            <div style={RESULT_LABEL}>Last fetched</div>
-            <div style={RESULT_VALUE}>{bundleVerifyResult.lastFetched}</div>
+            <div style={RESULT_LABEL}>Last checked</div>
+            <div style={RESULT_VALUE}>{jwtEndpointCheck.lastChecked}</div>
           </div>
         </div>
 
@@ -348,16 +363,16 @@ export function TrustBundleVerifyUnreachable() {
   return (
     <div style={SHELL}>
       <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Trust Bundle</div>
+      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ JWT Endpoints</div>
       <Stepper activeStep={4} />
       <div style={CONTENT}>
-        <div style={PAGE_TITLE}>Trust Bundle Verification</div>
+        <div style={PAGE_TITLE}>JWT Endpoint Verification</div>
         <div style={PAGE_DESC}>
-          Verifiers will fetch this endpoint to validate SVIDs offline. No Vault token is required.
+          JWT verifiers use the SPIFFE trust bundle and OIDC discovery endpoints. No Vault token is required.
         </div>
         <div style={ALERT('error')}>
-          ⚠  Trust bundle endpoint is not reachable from this browser. Verify your Vault listener is accessible at{' '}
-          <code style={{ fontFamily: tok.fontMono, fontSize: 11 }}>{BUNDLE_URL}</code>
+          ⚠  JWT verification endpoints are not reachable from this browser. Verify your Vault listener is accessible at{' '}
+          <code style={{ fontFamily: tok.fontMono, fontSize: 11 }}>{TRUST_BUNDLE_URL}</code>
         </div>
         <div style={{ fontSize: 12, color: tok.textSecondary, marginBottom: 20, lineHeight: 1.6 }}>
           The engine is configured correctly. This check verifies reachability from the browser only.
@@ -372,24 +387,22 @@ export function TrustBundleVerifyUnreachable() {
   );
 }
 
-export function TrustBundleVerifyEmptyBundle() {
+export function TrustBundleVerifyEmptySigningKeys() {
   return (
     <div style={SHELL}>
       <VaultTopBar />
-      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ Trust Bundle</div>
+      <div style={BREADCRUMB}>Secrets Engines ▸ spiffe ▸ JWT Endpoints</div>
       <Stepper activeStep={4} />
       <div style={CONTENT}>
-        <div style={PAGE_TITLE}>Trust Bundle Verification</div>
+        <div style={PAGE_TITLE}>JWT Endpoint Verification</div>
         <div style={PAGE_DESC}>
-          Verifiers will fetch this endpoint to validate SVIDs offline.
+          The public signing keys endpoint must return the keys used to verify JWT SVIDs.
         </div>
         <div style={ALERT('warning')}>
-          ⚠  Trust bundle returned 0 keys. Verify the PKI issuer path in engine configuration.
-          The bundle must contain at least one CA certificate before SVIDs can be validated.
+          ⚠  The public keys endpoint returned no signing keys. Verify the SPIFFE engine configuration and retry.
         </div>
         <div style={{ fontSize: 12, color: tok.textHelper, marginBottom: 20 }}>
-          Common cause: the PKI issuer path configured in the engine does not have a CA certificate yet,
-          or the issuer was deleted after the engine was configured.
+          Signing keys are published as a JSON Web Key Set. The trust bundle endpoint is separate and uses the https_web profile.
         </div>
         <div style={BTN_ROW}>
           <button style={BTN('secondary')}>Go to configuration</button>
